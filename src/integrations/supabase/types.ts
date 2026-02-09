@@ -14,16 +14,502 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      dps: {
+        Row: {
+          adresse: string | null
+          code: string
+          created_at: string | null
+          drs_id: string
+          email: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nom: string
+          prefecture: string
+          telephone: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          code: string
+          created_at?: string | null
+          drs_id: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom: string
+          prefecture: string
+          telephone?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          code?: string
+          created_at?: string | null
+          drs_id?: string
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom?: string
+          prefecture?: string
+          telephone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dps_drs_id_fkey"
+            columns: ["drs_id"]
+            isOneToOne: false
+            referencedRelation: "drs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drs: {
+        Row: {
+          adresse: string | null
+          code: string
+          created_at: string | null
+          email: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nom: string
+          region: string
+          telephone: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          code: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom: string
+          region: string
+          telephone?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          code?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom?: string
+          region?: string
+          telephone?: string | null
+        }
+        Relationships: []
+      }
+      lots: {
+        Row: {
+          code_barre: string | null
+          created_at: string | null
+          date_fabrication: string
+          date_peremption: string
+          fabricant: string | null
+          id: string
+          medicament_id: string
+          motif_rappel: string | null
+          numero_lot: string
+          pays_origine: string | null
+          quantite_initiale: number
+          statut: string | null
+          unite_mesure: string | null
+        }
+        Insert: {
+          code_barre?: string | null
+          created_at?: string | null
+          date_fabrication: string
+          date_peremption: string
+          fabricant?: string | null
+          id?: string
+          medicament_id: string
+          motif_rappel?: string | null
+          numero_lot: string
+          pays_origine?: string | null
+          quantite_initiale: number
+          statut?: string | null
+          unite_mesure?: string | null
+        }
+        Update: {
+          code_barre?: string | null
+          created_at?: string | null
+          date_fabrication?: string
+          date_peremption?: string
+          fabricant?: string | null
+          id?: string
+          medicament_id?: string
+          motif_rappel?: string | null
+          numero_lot?: string
+          pays_origine?: string | null
+          quantite_initiale?: number
+          statut?: string | null
+          unite_mesure?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lots_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicaments: {
+        Row: {
+          amm_code: string | null
+          categorie: string | null
+          classe_therapeutique: string | null
+          code_national: string | null
+          conditionnement: string | null
+          created_at: string | null
+          dci: string
+          dosage: string | null
+          forme_pharmaceutique: string | null
+          id: string
+          is_active: boolean | null
+          necessite_chaine_froid: boolean | null
+          nom_commercial: string | null
+          prix_public_indicatif: number | null
+          prix_unitaire_pcg: number | null
+          statut_commercialisation: string | null
+          temperature_stockage_max: number | null
+          temperature_stockage_min: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amm_code?: string | null
+          categorie?: string | null
+          classe_therapeutique?: string | null
+          code_national?: string | null
+          conditionnement?: string | null
+          created_at?: string | null
+          dci: string
+          dosage?: string | null
+          forme_pharmaceutique?: string | null
+          id?: string
+          is_active?: boolean | null
+          necessite_chaine_froid?: boolean | null
+          nom_commercial?: string | null
+          prix_public_indicatif?: number | null
+          prix_unitaire_pcg?: number | null
+          statut_commercialisation?: string | null
+          temperature_stockage_max?: number | null
+          temperature_stockage_min?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amm_code?: string | null
+          categorie?: string | null
+          classe_therapeutique?: string | null
+          code_national?: string | null
+          conditionnement?: string | null
+          created_at?: string | null
+          dci?: string
+          dosage?: string | null
+          forme_pharmaceutique?: string | null
+          id?: string
+          is_active?: boolean | null
+          necessite_chaine_froid?: boolean | null
+          nom_commercial?: string | null
+          prix_public_indicatif?: number | null
+          prix_unitaire_pcg?: number | null
+          statut_commercialisation?: string | null
+          temperature_stockage_max?: number | null
+          temperature_stockage_min?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      mouvements_stock: {
+        Row: {
+          commentaire: string | null
+          created_at: string | null
+          effectue_par: string | null
+          id: string
+          quantite: number
+          reference_id: string | null
+          reference_type: string | null
+          stock_id: string
+          type: string
+        }
+        Insert: {
+          commentaire?: string | null
+          created_at?: string | null
+          effectue_par?: string | null
+          id?: string
+          quantite: number
+          reference_id?: string | null
+          reference_type?: string | null
+          stock_id: string
+          type: string
+        }
+        Update: {
+          commentaire?: string | null
+          created_at?: string | null
+          effectue_par?: string | null
+          id?: string
+          quantite?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          stock_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mouvements_stock_stock_id_fkey"
+            columns: ["stock_id"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          entity_id: string | null
+          entity_type: string | null
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          entity_id?: string | null
+          entity_type?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stocks: {
+        Row: {
+          created_at: string | null
+          derniere_entree: string | null
+          derniere_maj: string | null
+          derniere_sortie: string | null
+          entite_id: string
+          entite_type: string
+          id: string
+          lot_id: string
+          quantite_actuelle: number
+          quantite_reservee: number | null
+          seuil_alerte: number
+          seuil_minimal: number
+          zone_stockage: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          derniere_entree?: string | null
+          derniere_maj?: string | null
+          derniere_sortie?: string | null
+          entite_id: string
+          entite_type: string
+          id?: string
+          lot_id: string
+          quantite_actuelle?: number
+          quantite_reservee?: number | null
+          seuil_alerte?: number
+          seuil_minimal?: number
+          zone_stockage?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          derniere_entree?: string | null
+          derniere_maj?: string | null
+          derniere_sortie?: string | null
+          entite_id?: string
+          entite_type?: string
+          id?: string
+          lot_id?: string
+          quantite_actuelle?: number
+          quantite_reservee?: number | null
+          seuil_alerte?: number
+          seuil_minimal?: number
+          zone_stockage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocks_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      structures: {
+        Row: {
+          adresse: string | null
+          capacite_stockage_m3: number | null
+          code: string | null
+          commune: string | null
+          created_at: string | null
+          date_ouverture: string | null
+          dps_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          nom: string
+          nombre_lits: number | null
+          telephone: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          capacite_stockage_m3?: number | null
+          code?: string | null
+          commune?: string | null
+          created_at?: string | null
+          date_ouverture?: string | null
+          dps_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          nom: string
+          nombre_lits?: number | null
+          telephone?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          capacite_stockage_m3?: number | null
+          code?: string | null
+          commune?: string | null
+          created_at?: string | null
+          date_ouverture?: string | null
+          dps_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          nom?: string
+          nombre_lits?: number | null
+          telephone?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "structures_dps_id_fkey"
+            columns: ["dps_id"]
+            isOneToOne: false
+            referencedRelation: "dps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "SUPER_ADMIN"
+        | "ADMIN_CENTRAL"
+        | "MIN_CABINET"
+        | "MIN_SG"
+        | "MIN_IG"
+        | "DNPM_DIR"
+        | "DNPM_ADJ"
+        | "DNPM_CHEF_SECTION"
+        | "PCG_DIR"
+        | "PCG_ADJ"
+        | "PCG_DIR_ACHATS"
+        | "PCG_DIR_STOCK"
+        | "PCG_DIR_DISTRIB"
+        | "ADMIN_DRS"
+        | "DRS_DIR"
+        | "DRS_ADJ"
+        | "DRS_RESP_PHARMA"
+        | "DRS_LOGISTIQUE"
+        | "DRS_EPIDEMIO"
+        | "ADMIN_DPS"
+        | "DPS_DIR"
+        | "DPS_ADJ"
+        | "DPS_RESP_PHARMA"
+        | "DPS_APPRO"
+        | "DPS_AGENT"
+        | "HOP_DIR"
+        | "HOP_PHARMA"
+        | "CS_RESP"
+        | "CS_AGENT"
+        | "CLIN_DIR"
+        | "CLIN_PHARMA"
+        | "PHARM_REDIST"
+        | "PHARM_RESP"
+        | "LIVREUR_PCG"
+        | "LIVREUR_DRS"
+        | "LIVREUR_DPS"
+        | "LIVREUR_HOP"
+        | "LIVREUR_PHARM_REDIST"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +636,47 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "SUPER_ADMIN",
+        "ADMIN_CENTRAL",
+        "MIN_CABINET",
+        "MIN_SG",
+        "MIN_IG",
+        "DNPM_DIR",
+        "DNPM_ADJ",
+        "DNPM_CHEF_SECTION",
+        "PCG_DIR",
+        "PCG_ADJ",
+        "PCG_DIR_ACHATS",
+        "PCG_DIR_STOCK",
+        "PCG_DIR_DISTRIB",
+        "ADMIN_DRS",
+        "DRS_DIR",
+        "DRS_ADJ",
+        "DRS_RESP_PHARMA",
+        "DRS_LOGISTIQUE",
+        "DRS_EPIDEMIO",
+        "ADMIN_DPS",
+        "DPS_DIR",
+        "DPS_ADJ",
+        "DPS_RESP_PHARMA",
+        "DPS_APPRO",
+        "DPS_AGENT",
+        "HOP_DIR",
+        "HOP_PHARMA",
+        "CS_RESP",
+        "CS_AGENT",
+        "CLIN_DIR",
+        "CLIN_PHARMA",
+        "PHARM_REDIST",
+        "PHARM_RESP",
+        "LIVREUR_PCG",
+        "LIVREUR_DRS",
+        "LIVREUR_DPS",
+        "LIVREUR_HOP",
+        "LIVREUR_PHARM_REDIST",
+      ],
+    },
   },
 } as const
