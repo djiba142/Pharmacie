@@ -1,31 +1,16 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Truck,
-  AlertTriangle,
-  BarChart3,
-  Users,
-  Settings,
-  LogOut,
-  Pill,
+  LayoutDashboard, Package, ShoppingCart, Truck, AlertTriangle,
+  BarChart3, Users, Settings, LogOut, Pill,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
 import { NavLink } from '@/components/NavLink';
 import logoLivramed from '@/assets/logo-livramed.png';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarFooter, SidebarHeader,
 } from '@/components/ui/sidebar';
 
 const mainNav = [
@@ -43,21 +28,16 @@ const adminNav = [
   { title: 'Paramètres', url: '/parametres', icon: Settings },
 ];
 
-const ADMIN_ROLES: RoleCode[] = [
-  RoleCode.SUPER_ADMIN,
-  RoleCode.ADMIN_CENTRAL,
-  RoleCode.ADMIN_DRS,
-  RoleCode.ADMIN_DPS,
-];
+const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN_CENTRAL', 'ADMIN_DRS', 'ADMIN_DPS'];
 
 export function AppSidebar() {
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const logoutFn = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
-  const isAdmin = user && ADMIN_ROLES.includes(user.role);
+  const isAdmin = user?.role && ADMIN_ROLES.includes(user.role);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logoutFn();
     navigate('/');
   };
 
@@ -129,14 +109,14 @@ export function AppSidebar() {
         {user && (
           <div className="flex items-center gap-3 px-2 py-2">
             <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-bold text-sidebar-accent-foreground">
-              {user.firstName[0]}{user.lastName[0]}
+              {user.first_name?.[0]}{user.last_name?.[0]}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-sidebar-foreground truncate">
-                {user.firstName} {user.lastName}
+                {user.first_name} {user.last_name}
               </p>
               <p className="text-[10px] text-sidebar-foreground/50 truncate">
-                {ROLE_LABELS[user.role]}
+                {user.role ? (ROLE_LABELS[user.role as RoleCode] || user.role) : 'Utilisateur'}
               </p>
             </div>
             <button

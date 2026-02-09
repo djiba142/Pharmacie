@@ -2,29 +2,14 @@ import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Package,
-  ShoppingCart,
-  Truck,
-  AlertTriangle,
-  Users,
-  Building2,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  CheckCircle2,
+  Package, ShoppingCart, Truck, AlertTriangle, Users, Building2,
+  TrendingUp, TrendingDown, Clock, CheckCircle2,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from 'recharts';
+import GuineaMap from '@/components/dashboard/GuineaMap';
 
 const stats = [
   { label: 'Utilisateurs actifs', value: '1 247', icon: Users, change: '+12%', up: true, color: 'text-primary' },
@@ -70,11 +55,8 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  VALIDEE: 'Validée',
-  EN_PREPARATION: 'Préparation',
-  EN_LIVRAISON: 'En livraison',
-  LIVREE: 'Livrée',
-  EN_ATTENTE_VALIDATION: 'En attente',
+  VALIDEE: 'Validée', EN_PREPARATION: 'Préparation', EN_LIVRAISON: 'En livraison',
+  LIVREE: 'Livrée', EN_ATTENTE_VALIDATION: 'En attente',
 };
 
 const priorityColors: Record<string, string> = {
@@ -90,7 +72,7 @@ const DashboardPage = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">
-          Bonjour, {user?.firstName} 👋
+          Bonjour, {user?.first_name || 'Utilisateur'} 👋
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Vue d'ensemble nationale — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -110,19 +92,16 @@ const DashboardPage = () => {
                 <stat.icon className={`h-5 w-5 ${stat.color} shrink-0`} />
               </div>
               <div className="flex items-center gap-1 mt-2">
-                {stat.up ? (
-                  <TrendingUp className="h-3 w-3 text-success" />
-                ) : (
-                  <TrendingDown className="h-3 w-3 text-destructive" />
-                )}
-                <span className={`text-xs ${stat.up ? 'text-success' : 'text-destructive'}`}>
-                  {stat.change}
-                </span>
+                {stat.up ? <TrendingUp className="h-3 w-3 text-success" /> : <TrendingDown className="h-3 w-3 text-destructive" />}
+                <span className={`text-xs ${stat.up ? 'text-success' : 'text-destructive'}`}>{stat.change}</span>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Guinea Map */}
+      <GuineaMap />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -154,9 +133,7 @@ const DashboardPage = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={3}>
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
+                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>

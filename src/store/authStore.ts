@@ -1,71 +1,102 @@
 import { create } from 'zustand';
-import { type AuthState, RoleCode, type User } from '@/types/auth';
+import { supabase } from '@/integrations/supabase/client';
 
-// Demo users for testing
-const DEMO_USERS: Array<User & { password: string }> = [
-  {
-    id: '1',
-    email: 'superadmin@sante.gov.gn',
-    password: 'SuperAdmin2025!',
-    firstName: 'Super',
-    lastName: 'Administrateur',
-    role: RoleCode.SUPER_ADMIN,
-    isActive: true,
-  },
-  {
-    id: '2',
-    email: 'admin.central@sante.gov.gn',
-    password: 'Admin2025!',
-    firstName: 'Mamadou',
-    lastName: 'Barry',
-    role: RoleCode.ADMIN_CENTRAL,
-    isActive: true,
-  },
-  {
-    id: '3',
-    email: 'drs.conakry@sante.gov.gn',
-    password: 'DRS2025!',
-    firstName: 'Fatoumata',
-    lastName: 'Diallo',
-    role: RoleCode.DRS_RESP_PHARMA,
-    entityType: 'DRS',
-    isActive: true,
-  },
-  {
-    id: '4',
-    email: 'pharma.donka@sante.gov.gn',
-    password: 'Pharma2025!',
-    firstName: 'Aïssatou',
-    lastName: 'Sow',
-    role: RoleCode.HOP_PHARMA,
-    entityType: 'HOPITAL',
-    isActive: true,
-  },
-  {
-    id: '5',
-    email: 'livreur1@sante.gov.gn',
-    password: 'Livreur2025!',
-    firstName: 'Ibrahima',
-    lastName: 'Sylla',
-    role: RoleCode.LIVREUR_DRS,
-    entityType: 'DRS',
-    isActive: true,
-  },
-];
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  entity_id?: string;
+  entity_type?: string;
+  is_active: boolean;
+  avatar_url?: string;
+  role?: string;
+}
 
-export const useAuthStore = create<AuthState>((set) => ({
+interface AuthState {
+  user: UserProfile | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  initialize: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  fetchProfile: (userId: string) => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
-  login: (email: string, password: string) => {
-    const found = DEMO_USERS.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (found) {
-      const { password: _, ...user } = found;
-      set({ user, isAuthenticated: true });
-      return true;
+  loading: true,
+
+  initialize: async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await get().fetchProfile(session.user.id);
+      }
+    } catch (err) {
+      console.error('Auth init error:', err);
+    } finally {
+      set({ loading: false });
     }
-    return false;
+
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await get().fetchProfile(session.user.id);
+      } else {
+        set({ user: null, isAuthenticated: false });
+      }
+    });
   },
-  logout: () => set({ user: null, isAuthenticated: false }),
+
+  fetchProfile: async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profile) {
+      set({
+        user: {
+          ...profile,
+          role: roleData?.role || undefined,
+        } as UserProfile,
+        isAuthenticated: true,
+      });
+    }
+  },
+
+  login: async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  },
+
+  signup: async (email: string, password: string, firstName: string, lastName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { first_name: firstName, last_name: lastName },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  },
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ user: null, isAuthenticated: false });
+  },
 }));

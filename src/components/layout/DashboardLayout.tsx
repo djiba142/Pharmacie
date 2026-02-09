@@ -4,10 +4,22 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ROLE_LABELS } from '@/types/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, loading } = useAuthStore();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="space-y-4 w-64">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/" replace />;
@@ -18,12 +30,11 @@ export default function DashboardLayout() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
           <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
               <div className="hidden sm:block">
-                <p className="text-xs text-muted-foreground">{ROLE_LABELS[user.role]}</p>
+                <p className="text-xs text-muted-foreground">{user.role || 'Utilisateur'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -33,8 +44,6 @@ export default function DashboardLayout() {
               </Button>
             </div>
           </header>
-
-          {/* Main content */}
           <main className="flex-1 overflow-auto p-4 md:p-6">
             <Outlet />
           </main>
