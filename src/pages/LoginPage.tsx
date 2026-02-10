@@ -14,6 +14,12 @@ import logoUnicef from '@/assets/partners/unicef.jpg';
 import logoGavi from '@/assets/partners/gavi.png';
 import logoFondsMondial from '@/assets/partners/fonds-mondial.jpg';
 import logoPcg from '@/assets/partners/pcg.jpg';
+import logoMsf from '@/assets/partners/msf.png';
+import logoCroixRouge from '@/assets/partners/croix-rouge.jpg';
+import logoOnpg from '@/assets/partners/onpg.jpg';
+import logoCosephag from '@/assets/partners/cosephag.jpg';
+import logoGuinee from '@/assets/partners/guinee.png';
+import logoUganc from '@/assets/partners/uganc.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
