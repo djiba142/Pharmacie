@@ -60,7 +60,7 @@ const LoginPage = () => {
     }
   };
 
-  const partners = [logoOms, logoUsaid, logoUnicef, logoGavi, logoFondsMondial, logoPcg];
+  const partners = [logoOms, logoUsaid, logoUnicef, logoGavi, logoFondsMondial, logoPcg, logoMsf, logoCroixRouge, logoOnpg, logoCosephag, logoGuinee, logoUganc];
 
   return (
     <div className="min-h-screen flex">
