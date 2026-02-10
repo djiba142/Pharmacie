@@ -7,23 +7,29 @@ import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
 import { NavLink } from '@/components/NavLink';
 import logoLivramed from '@/assets/logo-livramed.png';
+import { useUserLevel, UserLevel } from '@/hooks/useUserLevel';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarFooter, SidebarHeader,
 } from '@/components/ui/sidebar';
 
-const mainNav = [
+type NavItem = {
+  title: string; url: string; icon: any;
+  levels?: UserLevel[]; // if set, only show for these levels
+};
+
+const mainNav: NavItem[] = [
   { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Stocks', url: '/stocks', icon: Package },
-  { title: 'Médicaments', url: '/medicaments', icon: Pill },
+  { title: 'Médicaments', url: '/medicaments', icon: Pill, levels: ['national', 'regional'] },
   { title: 'Commandes', url: '/commandes', icon: ShoppingCart },
-  { title: 'Livraisons', url: '/livraisons', icon: Truck },
-  { title: 'Pharmacovigilance', url: '/pharmacovigilance', icon: AlertTriangle },
-  { title: 'Rapports', url: '/rapports', icon: BarChart3 },
+  { title: 'Livraisons', url: '/livraisons', icon: Truck, levels: ['national', 'regional', 'prefectoral'] },
+  { title: 'Pharmacovigilance', url: '/pharmacovigilance', icon: AlertTriangle, levels: ['national', 'regional'] },
+  { title: 'Rapports', url: '/rapports', icon: BarChart3, levels: ['national', 'regional', 'prefectoral'] },
 ];
 
-const adminNav = [
+const adminNav: NavItem[] = [
   { title: 'Utilisateurs', url: '/utilisateurs', icon: Users },
   { title: 'Paramètres', url: '/parametres', icon: Settings },
 ];
@@ -34,7 +40,10 @@ export function AppSidebar() {
   const user = useAuthStore((s) => s.user);
   const logoutFn = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const { level } = useUserLevel();
   const isAdmin = user?.role && ADMIN_ROLES.includes(user.role);
+
+  const filteredMainNav = mainNav.filter((item) => !item.levels || item.levels.includes(level));
 
   const handleLogout = async () => {
     await logoutFn();
@@ -60,7 +69,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
+              {filteredMainNav.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

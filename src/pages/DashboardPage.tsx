@@ -2,86 +2,115 @@ import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Package, ShoppingCart, Truck, AlertTriangle, Users, Building2,
-  TrendingUp, TrendingDown, Clock, CheckCircle2,
+  Package, AlertTriangle, Building2, Pill,
+  TrendingUp, TrendingDown, Clock, Activity, ShieldAlert, Calendar,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
 import GuineaMap from '@/components/dashboard/GuineaMap';
+import { useUserLevel, LEVEL_LABELS } from '@/hooks/useUserLevel';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const stats = [
-  { label: 'Utilisateurs actifs', value: '1 247', icon: Users, change: '+12%', up: true, color: 'text-primary' },
-  { label: 'Stocks en alerte', value: '23', icon: Package, change: '-5', up: false, color: 'text-warning' },
-  { label: 'Commandes en cours', value: '89', icon: ShoppingCart, change: '+18', up: true, color: 'text-info' },
-  { label: 'Livraisons actives', value: '34', icon: Truck, change: '+7', up: true, color: 'text-success' },
-  { label: 'Structures actives', value: '456', icon: Building2, change: '+3', up: true, color: 'text-primary' },
-  { label: 'Alertes PV', value: '5', icon: AlertTriangle, change: '+2', up: true, color: 'text-destructive' },
+const PIE_COLORS = [
+  'hsl(152, 60%, 42%)', // OK
+  'hsl(38, 92%, 50%)',  // Alerte
+  'hsl(0, 72%, 51%)',   // Critique
 ];
-
-const barData = [
-  { region: 'Conakry', commandes: 245 },
-  { region: 'Kindia', commandes: 132 },
-  { region: 'Boké', commandes: 98 },
-  { region: 'Kankan', commandes: 87 },
-  { region: 'Faranah', commandes: 65 },
-  { region: 'Mamou', commandes: 54 },
-  { region: 'Labé', commandes: 76 },
-  { region: 'N\'Zérékoré', commandes: 112 },
-];
-
-const pieData = [
-  { name: 'Livrées', value: 156, color: 'hsl(152, 60%, 42%)' },
-  { name: 'En cours', value: 34, color: 'hsl(210, 80%, 52%)' },
-  { name: 'En attente', value: 23, color: 'hsl(38, 92%, 50%)' },
-  { name: 'Échec', value: 4, color: 'hsl(0, 72%, 51%)' },
-];
-
-const recentOrders = [
-  { id: 'CMD-2025-001234', from: 'Hôpital Donka', status: 'VALIDEE', priority: 'URGENTE', date: '09/02/2026' },
-  { id: 'CMD-2025-001233', from: 'CS Ratoma', status: 'EN_PREPARATION', priority: 'NORMALE', date: '09/02/2026' },
-  { id: 'CMD-2025-001232', from: 'DPS Dubréka', status: 'EN_LIVRAISON', priority: 'NORMALE', date: '08/02/2026' },
-  { id: 'CMD-2025-001231', from: 'Clinique Paré', status: 'LIVREE', priority: 'FAIBLE', date: '08/02/2026' },
-  { id: 'CMD-2025-001230', from: 'CS Matam', status: 'EN_ATTENTE_VALIDATION', priority: 'URGENTE', date: '07/02/2026' },
-];
-
-const statusColors: Record<string, string> = {
-  VALIDEE: 'bg-info/10 text-info',
-  EN_PREPARATION: 'bg-warning/10 text-warning',
-  EN_LIVRAISON: 'bg-primary/10 text-primary',
-  LIVREE: 'bg-success/10 text-success',
-  EN_ATTENTE_VALIDATION: 'bg-muted text-muted-foreground',
-};
-
-const statusLabels: Record<string, string> = {
-  VALIDEE: 'Validée', EN_PREPARATION: 'Préparation', EN_LIVRAISON: 'En livraison',
-  LIVREE: 'Livrée', EN_ATTENTE_VALIDATION: 'En attente',
-};
-
-const priorityColors: Record<string, string> = {
-  URGENTE: 'bg-destructive/10 text-destructive',
-  NORMALE: 'bg-muted text-muted-foreground',
-  FAIBLE: 'bg-muted text-muted-foreground',
-};
 
 const DashboardPage = () => {
   const user = useAuthStore((s) => s.user);
+  const { level, entityId } = useUserLevel();
+  const { stats, stocks, regionSummary, isLoading } = useDashboardData(level, entityId);
+
+  const pieData = [
+    { name: 'Normal', value: stats.totalStocks - stats.stocksEnAlerte - stats.stocksCritiques },
+    { name: 'Alerte', value: stats.stocksEnAlerte },
+    { name: 'Critique', value: stats.stocksCritiques },
+  ].filter(d => d.value > 0);
+
+  const kpis = [
+    {
+      label: 'Stocks suivis',
+      value: stats.totalStocks,
+      icon: Package,
+      color: 'text-primary',
+      sub: `${stats.stocksEnAlerte} en alerte`,
+    },
+    {
+      label: 'Stocks critiques',
+      value: stats.stocksCritiques,
+      icon: ShieldAlert,
+      color: 'text-destructive',
+      sub: 'Sous seuil minimal',
+    },
+    {
+      label: 'Médicaments',
+      value: stats.totalMedicaments,
+      icon: Pill,
+      color: 'text-info',
+      sub: 'Références distinctes',
+    },
+    {
+      label: 'Lots périmés',
+      value: stats.lotsPerimes,
+      icon: AlertTriangle,
+      color: 'text-warning',
+      sub: `${stats.lotsBientotPerimes} bientôt`,
+    },
+    ...(level === 'national' || level === 'regional' ? [{
+      label: 'Structures',
+      value: stats.totalStructures,
+      icon: Building2,
+      color: 'text-primary',
+      sub: 'Actives',
+    }] : []),
+    {
+      label: 'Péremption < 3 mois',
+      value: stats.lotsBientotPerimes,
+      icon: Calendar,
+      color: 'text-warning',
+      sub: 'Lots à surveiller',
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">
-          Bonjour, {user?.first_name || 'Utilisateur'} 👋
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Vue d'ensemble nationale — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            Bonjour, {user?.first_name || 'Utilisateur'} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {LEVEL_LABELS[level]} — {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          <Activity className="h-3 w-3 mr-1" />
+          {LEVEL_LABELS[level]}
+        </Badge>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {stats.map((stat) => (
+        {kpis.map((stat) => (
           <Card key={stat.label} className="stat-card">
             <CardContent className="p-0">
               <div className="flex items-start justify-between">
@@ -91,58 +120,83 @@ const DashboardPage = () => {
                 </div>
                 <stat.icon className={`h-5 w-5 ${stat.color} shrink-0`} />
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                {stat.up ? <TrendingUp className="h-3 w-3 text-success" /> : <TrendingDown className="h-3 w-3 text-destructive" />}
-                <span className={`text-xs ${stat.up ? 'text-success' : 'text-destructive'}`}>{stat.change}</span>
-              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">{stat.sub}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Guinea Map */}
-      <GuineaMap />
+      {/* Map - only national level */}
+      {level === 'national' && <GuineaMap />}
 
-      {/* Charts row */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Bar chart - regional summary for national, stock details for others */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-display">Commandes par région</CardTitle>
+            <CardTitle className="text-sm font-display">
+              {level === 'national' ? 'Stocks par région' : 'Répartition des stocks'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(170, 15%, 89%)" />
-                  <XAxis dataKey="region" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="commandes" fill="hsl(174, 55%, 38%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {level === 'national' && regionSummary.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={regionSummary}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(170, 15%, 89%)" />
+                    <XAxis dataKey="region" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="total" name="Total" fill="hsl(174, 55%, 38%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="alertes" name="Alertes" fill="hsl(38, 92%, 50%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stocks.slice(0, 10).map((s: any) => ({
+                    nom: s.lots?.medicaments?.dci?.substring(0, 12) || 'N/A',
+                    quantite: s.quantite_actuelle,
+                    seuil: s.seuil_alerte,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(170, 15%, 89%)" />
+                    <XAxis dataKey="nom" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="quantite" name="Stock actuel" fill="hsl(174, 55%, 38%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="seuil" name="Seuil alerte" fill="hsl(0, 72%, 51%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
+        {/* Pie chart - stock status */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-display">Statut livraisons</CardTitle>
+            <CardTitle className="text-sm font-display">État des stocks</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={3}>
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              {pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={3}>
+                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  Aucune donnée
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-3 mt-2 justify-center">
-              {pieData.map((d) => (
+              {pieData.map((d, i) => (
                 <div key={d.name} className="flex items-center gap-1.5 text-xs">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} />
                   {d.name} ({d.value})
                 </div>
               ))}
@@ -151,42 +205,56 @@ const DashboardPage = () => {
         </Card>
       </div>
 
-      {/* Recent orders */}
+      {/* Stocks table - detail view */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-display">Commandes récentes</CardTitle>
+          <CardTitle className="text-sm font-display">Détail des stocks</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground border-b">
-                  <th className="pb-2 font-medium">N° Commande</th>
-                  <th className="pb-2 font-medium">Demandeur</th>
+                  <th className="pb-2 font-medium">Médicament</th>
+                  <th className="pb-2 font-medium">N° Lot</th>
+                  <th className="pb-2 font-medium">Quantité</th>
+                  <th className="pb-2 font-medium">Seuil</th>
+                  <th className="pb-2 font-medium">Péremption</th>
                   <th className="pb-2 font-medium">Statut</th>
-                  <th className="pb-2 font-medium">Priorité</th>
-                  <th className="pb-2 font-medium">Date</th>
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((o) => (
-                  <tr key={o.id} className="border-b border-border/50 last:border-0">
-                    <td className="py-3 font-mono text-xs">{o.id}</td>
-                    <td className="py-3">{o.from}</td>
-                    <td className="py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[o.status]}`}>
-                        {o.status === 'LIVREE' ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {statusLabels[o.status]}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[o.priority]}`}>
-                        {o.priority === 'URGENTE' ? '🔴 Urgente' : o.priority === 'NORMALE' ? 'Normale' : 'Faible'}
-                      </span>
-                    </td>
-                    <td className="py-3 text-muted-foreground text-xs">{o.date}</td>
-                  </tr>
-                ))}
+                {stocks.slice(0, 10).map((s: any) => {
+                  const isAlerte = s.quantite_actuelle <= s.seuil_alerte;
+                  const isCritique = s.quantite_actuelle <= s.seuil_minimal;
+                  const exp = new Date(s.lots?.date_peremption);
+                  const isExpired = exp < new Date();
+                  return (
+                    <tr key={s.id} className="border-b border-border/50 last:border-0">
+                      <td className="py-3 font-medium">{s.lots?.medicaments?.dci || 'N/A'}</td>
+                      <td className="py-3 font-mono text-xs">{s.lots?.numero_lot}</td>
+                      <td className="py-3 font-bold">{s.quantite_actuelle}</td>
+                      <td className="py-3 text-muted-foreground">{s.seuil_alerte}</td>
+                      <td className="py-3 text-xs">
+                        <span className={isExpired ? 'text-destructive font-medium' : 'text-muted-foreground'}>
+                          {exp.toLocaleDateString('fr-FR')}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <Badge variant="outline" className={
+                          isCritique ? 'bg-destructive/10 text-destructive border-destructive/30' :
+                          isAlerte ? 'bg-warning/10 text-warning border-warning/30' :
+                          'bg-success/10 text-success border-success/30'
+                        }>
+                          {isCritique ? '🔴 Critique' : isAlerte ? '🟡 Alerte' : '🟢 Normal'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {stocks.length === 0 && (
+                  <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Aucun stock trouvé pour votre périmètre</td></tr>
+                )}
               </tbody>
             </table>
           </div>
