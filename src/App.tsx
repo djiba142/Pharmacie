@@ -4,9 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import StocksPage from "./pages/StocksPage";
+import CommandesPage from "./pages/CommandesPage";
+import LivraisonsPage from "./pages/LivraisonsPage";
 import UsersPage from "./pages/UsersPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -24,13 +27,14 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/stocks" element={<StocksPage />} />
         <Route path="/medicaments" element={<PlaceholderPage />} />
-        <Route path="/commandes" element={<PlaceholderPage />} />
-        <Route path="/livraisons" element={<PlaceholderPage />} />
+        <Route path="/commandes" element={<CommandesPage />} />
+        <Route path="/livraisons" element={<LivraisonsPage />} />
         <Route path="/pharmacovigilance" element={<PlaceholderPage />} />
         <Route path="/rapports" element={<PlaceholderPage />} />
         <Route path="/utilisateurs" element={<UsersPage />} />
