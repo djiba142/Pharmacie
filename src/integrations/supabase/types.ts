@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      commandes: {
+        Row: {
+          commentaire: string | null
+          created_at: string | null
+          created_by: string | null
+          date_commande: string
+          date_livraison_souhaitee: string | null
+          date_validation: string | null
+          entite_demandeur_id: string
+          entite_demandeur_type: string
+          entite_fournisseur_id: string | null
+          entite_fournisseur_type: string | null
+          id: string
+          numero_commande: string
+          priorite: string | null
+          statut: string
+          updated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          commentaire?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_commande?: string
+          date_livraison_souhaitee?: string | null
+          date_validation?: string | null
+          entite_demandeur_id: string
+          entite_demandeur_type: string
+          entite_fournisseur_id?: string | null
+          entite_fournisseur_type?: string | null
+          id?: string
+          numero_commande: string
+          priorite?: string | null
+          statut?: string
+          updated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          commentaire?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_commande?: string
+          date_livraison_souhaitee?: string | null
+          date_validation?: string | null
+          entite_demandeur_id?: string
+          entite_demandeur_type?: string
+          entite_fournisseur_id?: string | null
+          entite_fournisseur_type?: string | null
+          id?: string
+          numero_commande?: string
+          priorite?: string | null
+          statut?: string
+          updated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
       dps: {
         Row: {
           adresse: string | null
@@ -102,6 +159,122 @@ export type Database = {
           telephone?: string | null
         }
         Relationships: []
+      }
+      lignes_commande: {
+        Row: {
+          commande_id: string
+          created_at: string | null
+          id: string
+          medicament_id: string
+          quantite_approuvee: number | null
+          quantite_demandee: number
+          quantite_livree: number | null
+        }
+        Insert: {
+          commande_id: string
+          created_at?: string | null
+          id?: string
+          medicament_id: string
+          quantite_approuvee?: number | null
+          quantite_demandee: number
+          quantite_livree?: number | null
+        }
+        Update: {
+          commande_id?: string
+          created_at?: string | null
+          id?: string
+          medicament_id?: string
+          quantite_approuvee?: number | null
+          quantite_demandee?: number
+          quantite_livree?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lignes_commande_commande_id_fkey"
+            columns: ["commande_id"]
+            isOneToOne: false
+            referencedRelation: "commandes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lignes_commande_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      livraisons: {
+        Row: {
+          commande_id: string | null
+          commentaire: string | null
+          created_at: string | null
+          created_by: string | null
+          date_arrivee_estimee: string | null
+          date_arrivee_reelle: string | null
+          date_depart: string | null
+          entite_destination_id: string
+          entite_destination_type: string
+          entite_origine_id: string
+          entite_origine_type: string
+          id: string
+          latitude_actuelle: number | null
+          livreur_id: string | null
+          longitude_actuelle: number | null
+          numero_livraison: string
+          statut: string
+          updated_at: string | null
+        }
+        Insert: {
+          commande_id?: string | null
+          commentaire?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_arrivee_estimee?: string | null
+          date_arrivee_reelle?: string | null
+          date_depart?: string | null
+          entite_destination_id: string
+          entite_destination_type: string
+          entite_origine_id: string
+          entite_origine_type: string
+          id?: string
+          latitude_actuelle?: number | null
+          livreur_id?: string | null
+          longitude_actuelle?: number | null
+          numero_livraison: string
+          statut?: string
+          updated_at?: string | null
+        }
+        Update: {
+          commande_id?: string | null
+          commentaire?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_arrivee_estimee?: string | null
+          date_arrivee_reelle?: string | null
+          date_depart?: string | null
+          entite_destination_id?: string
+          entite_destination_type?: string
+          entite_origine_id?: string
+          entite_origine_type?: string
+          id?: string
+          latitude_actuelle?: number | null
+          livreur_id?: string | null
+          longitude_actuelle?: number | null
+          numero_livraison?: string
+          statut?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livraisons_commande_id_fkey"
+            columns: ["commande_id"]
+            isOneToOne: false
+            referencedRelation: "commandes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lots: {
         Row: {
