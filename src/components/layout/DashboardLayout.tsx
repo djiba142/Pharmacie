@@ -22,7 +22,7 @@ export default function DashboardLayout() {
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
