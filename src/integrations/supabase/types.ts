@@ -71,6 +71,93 @@ export type Database = {
         }
         Relationships: []
       }
+      declarations_ei: {
+        Row: {
+          actions_prises: string | null
+          commentaire_evaluateur: string | null
+          created_at: string | null
+          date_declaration: string | null
+          date_survenue: string | null
+          declarant_id: string | null
+          description_ei: string
+          entite_id: string | null
+          entite_type: string | null
+          evaluated_by: string | null
+          evolution: string | null
+          gravite: string
+          id: string
+          lot_id: string | null
+          medicament_id: string | null
+          numero: string
+          patient_age: number | null
+          patient_initiales: string | null
+          patient_sexe: string | null
+          statut: string
+          updated_at: string | null
+        }
+        Insert: {
+          actions_prises?: string | null
+          commentaire_evaluateur?: string | null
+          created_at?: string | null
+          date_declaration?: string | null
+          date_survenue?: string | null
+          declarant_id?: string | null
+          description_ei: string
+          entite_id?: string | null
+          entite_type?: string | null
+          evaluated_by?: string | null
+          evolution?: string | null
+          gravite?: string
+          id?: string
+          lot_id?: string | null
+          medicament_id?: string | null
+          numero: string
+          patient_age?: number | null
+          patient_initiales?: string | null
+          patient_sexe?: string | null
+          statut?: string
+          updated_at?: string | null
+        }
+        Update: {
+          actions_prises?: string | null
+          commentaire_evaluateur?: string | null
+          created_at?: string | null
+          date_declaration?: string | null
+          date_survenue?: string | null
+          declarant_id?: string | null
+          description_ei?: string
+          entite_id?: string | null
+          entite_type?: string | null
+          evaluated_by?: string | null
+          evolution?: string | null
+          gravite?: string
+          id?: string
+          lot_id?: string | null
+          medicament_id?: string | null
+          numero?: string
+          patient_age?: number | null
+          patient_initiales?: string | null
+          patient_sexe?: string | null
+          statut?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "declarations_ei_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "declarations_ei_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dps: {
         Row: {
           adresse: string | null
@@ -442,6 +529,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          lu: boolean
+          message: string
+          reference_id: string | null
+          reference_type: string | null
+          titre: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lu?: boolean
+          message: string
+          reference_id?: string | null
+          reference_type?: string | null
+          titre: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lu?: boolean
+          message?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          titre?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -486,6 +609,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rappels_lots: {
+        Row: {
+          created_at: string | null
+          date_rappel: string | null
+          id: string
+          initie_par: string | null
+          instructions: string | null
+          lot_id: string
+          motif: string
+          niveau: string
+          statut: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_rappel?: string | null
+          id?: string
+          initie_par?: string | null
+          instructions?: string | null
+          lot_id: string
+          motif: string
+          niveau?: string
+          statut?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_rappel?: string | null
+          id?: string
+          initie_par?: string | null
+          instructions?: string | null
+          lot_id?: string
+          motif?: string
+          niveau?: string
+          statut?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rappels_lots_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stocks: {
         Row: {
