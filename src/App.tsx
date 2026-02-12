@@ -10,6 +10,7 @@ import DashboardPage from "./pages/DashboardPage";
 import StocksPage from "./pages/StocksPage";
 import CommandesPage from "./pages/CommandesPage";
 import LivraisonsPage from "./pages/LivraisonsPage";
+import PharmacovigilancePage from "./pages/PharmacovigilancePage";
 import UsersPage from "./pages/UsersPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -35,7 +36,7 @@ function AppContent() {
         <Route path="/medicaments" element={<PlaceholderPage />} />
         <Route path="/commandes" element={<CommandesPage />} />
         <Route path="/livraisons" element={<LivraisonsPage />} />
-        <Route path="/pharmacovigilance" element={<PlaceholderPage />} />
+        <Route path="/pharmacovigilance" element={<PharmacovigilancePage />} />
         <Route path="/rapports" element={<PlaceholderPage />} />
         <Route path="/utilisateurs" element={<UsersPage />} />
         <Route path="/parametres" element={<PlaceholderPage />} />
