@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Eye, EyeOff, Lock, Mail, Shield, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
 import logoLivramed from '@/assets/logo-livramed.png';
 import logoMshp from '@/assets/partners/mshp.png';
 import logoOms from '@/assets/partners/oms.png';
@@ -24,34 +24,22 @@ import logoUganc from '@/assets/partners/uganc.png';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSignup, setIsSignup] = useState(false);
   const navigate = useNavigate();
-  const { login, signup } = useAuthStore();
+  const { login } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      if (isSignup) {
-        const result = await signup(email, password, firstName, lastName);
-        if (result.success) {
-          navigate('/dashboard');
-        } else {
-          setError(result.error || 'Erreur lors de l\'inscription');
-        }
+      const result = await login(email, password);
+      if (result.success) {
+        navigate('/dashboard');
       } else {
-        const result = await login(email, password);
-        if (result.success) {
-          navigate('/dashboard');
-        } else {
-          setError(result.error || 'Email ou mot de passe incorrect');
-        }
+        setError(result.error || 'Email ou mot de passe incorrect');
       }
     } catch {
       setError('Erreur de connexion');
@@ -109,33 +97,13 @@ const LoginPage = () => {
           </div>
 
           <div className="text-center lg:text-left">
-            <h2 className="text-2xl font-display font-bold text-foreground">
-              {isSignup ? 'Créer un compte' : 'Connexion'}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isSignup ? 'Remplissez les informations ci-dessous' : 'Accédez à votre espace de gestion'}
-            </p>
+            <h2 className="text-2xl font-display font-bold text-foreground">Connexion</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Accédez à votre espace de gestion</p>
           </div>
 
           <Card className="border-border/50 shadow-sm">
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {isSignup && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">Prénom</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="firstName" placeholder="Prénom" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="pl-10" required />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Nom</Label>
-                      <Input id="lastName" placeholder="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                    </div>
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <Label htmlFor="email">Adresse email</Label>
                   <div className="relative">
@@ -158,15 +126,9 @@ const LoginPage = () => {
                 {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Chargement...' : isSignup ? 'Créer le compte' : 'Se connecter'}
+                  {loading ? 'Chargement...' : 'Se connecter'}
                 </Button>
               </form>
-
-              <div className="mt-4 text-center">
-                <button type="button" onClick={() => { setIsSignup(!isSignup); setError(''); }} className="text-sm text-primary hover:underline">
-                  {isSignup ? 'Déjà un compte ? Se connecter' : 'Pas de compte ? S\'inscrire'}
-                </button>
-              </div>
             </CardContent>
           </Card>
 
