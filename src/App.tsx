@@ -8,11 +8,17 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import StocksPage from "./pages/StocksPage";
+import MedicamentsPage from "./pages/MedicamentsPage";
 import CommandesPage from "./pages/CommandesPage";
 import LivraisonsPage from "./pages/LivraisonsPage";
 import PharmacovigilancePage from "./pages/PharmacovigilancePage";
+import RapportsPage from "./pages/RapportsPage";
 import UsersPage from "./pages/UsersPage";
-import PlaceholderPage from "./pages/PlaceholderPage";
+import ParametresPage from "./pages/ParametresPage";
+import ProfilPage from "./pages/ProfilPage";
+import AProposPage from "./pages/AProposPage";
+import ValidationInscriptionsPage from "./pages/ValidationInscriptionsPage";
+import DemandeInscriptionPage from "./pages/DemandeInscriptionPage";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from './store/authStore';
@@ -30,16 +36,20 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/inscription" element={<DemandeInscriptionPage />} />
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/stocks" element={<StocksPage />} />
-        <Route path="/medicaments" element={<PlaceholderPage />} />
+        <Route path="/medicaments" element={<MedicamentsPage />} />
         <Route path="/commandes" element={<CommandesPage />} />
         <Route path="/livraisons" element={<LivraisonsPage />} />
         <Route path="/pharmacovigilance" element={<PharmacovigilancePage />} />
-        <Route path="/rapports" element={<PlaceholderPage />} />
+        <Route path="/rapports" element={<RapportsPage />} />
         <Route path="/utilisateurs" element={<UsersPage />} />
-        <Route path="/parametres" element={<PlaceholderPage />} />
+        <Route path="/validation-inscriptions" element={<ValidationInscriptionsPage />} />
+        <Route path="/parametres" element={<ParametresPage />} />
+        <Route path="/profil" element={<ProfilPage />} />
+        <Route path="/a-propos" element={<AProposPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

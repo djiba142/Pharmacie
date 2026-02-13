@@ -158,6 +158,96 @@ export type Database = {
           },
         ]
       }
+      demandes_inscription: {
+        Row: {
+          adresse: string | null
+          created_at: string | null
+          date_validation_dps: string | null
+          date_validation_drs: string | null
+          date_validation_pcg: string | null
+          documents: Json | null
+          email: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          motif_rejet: string | null
+          nom_structure: string
+          numero_suivi: string
+          prefecture: string
+          region: string
+          responsable_email: string | null
+          responsable_nom: string
+          responsable_num_ordre: string | null
+          responsable_prenom: string
+          responsable_telephone: string | null
+          statut: string
+          telephone: string | null
+          type_structure: string
+          updated_at: string | null
+          validated_by_dps: string | null
+          validated_by_drs: string | null
+          validated_by_pcg: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          created_at?: string | null
+          date_validation_dps?: string | null
+          date_validation_drs?: string | null
+          date_validation_pcg?: string | null
+          documents?: Json | null
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          motif_rejet?: string | null
+          nom_structure: string
+          numero_suivi: string
+          prefecture: string
+          region: string
+          responsable_email?: string | null
+          responsable_nom: string
+          responsable_num_ordre?: string | null
+          responsable_prenom: string
+          responsable_telephone?: string | null
+          statut?: string
+          telephone?: string | null
+          type_structure: string
+          updated_at?: string | null
+          validated_by_dps?: string | null
+          validated_by_drs?: string | null
+          validated_by_pcg?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          created_at?: string | null
+          date_validation_dps?: string | null
+          date_validation_drs?: string | null
+          date_validation_pcg?: string | null
+          documents?: Json | null
+          email?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          motif_rejet?: string | null
+          nom_structure?: string
+          numero_suivi?: string
+          prefecture?: string
+          region?: string
+          responsable_email?: string | null
+          responsable_nom?: string
+          responsable_num_ordre?: string | null
+          responsable_prenom?: string
+          responsable_telephone?: string | null
+          statut?: string
+          telephone?: string | null
+          type_structure?: string
+          updated_at?: string | null
+          validated_by_dps?: string | null
+          validated_by_drs?: string | null
+          validated_by_pcg?: string | null
+        }
+        Relationships: []
+      }
       dps: {
         Row: {
           adresse: string | null
