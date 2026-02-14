@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Truck, AlertTriangle,
   BarChart3, Users, Settings, LogOut, Pill, ClipboardCheck, User, Info,
+  Building2, Hospital, HeartPulse,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
@@ -33,6 +34,12 @@ const adminNav: NavItem[] = [
   { title: 'Utilisateurs', url: '/utilisateurs', icon: Users },
   { title: 'Inscriptions', url: '/validation-inscriptions', icon: ClipboardCheck },
   { title: 'Paramètres', url: '/parametres', icon: Settings },
+];
+
+const structureNav: NavItem[] = [
+  { title: 'Pharmacie', url: '/gestion-pharmacie', icon: Building2 },
+  { title: 'Hôpital', url: '/gestion-hopital', icon: Hospital },
+  { title: 'Centre de Santé', url: '/gestion-centre-sante', icon: HeartPulse },
 ];
 
 const userNav: NavItem[] = [
@@ -107,6 +114,23 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest px-3">Structures</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {structureNav.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className={linkClass} activeClassName={activeClass}>
+                      <item.icon className="h-4 w-4 shrink-0" /><span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest px-3">Compte</SidebarGroupLabel>

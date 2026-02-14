@@ -19,6 +19,9 @@ import ProfilPage from "./pages/ProfilPage";
 import AProposPage from "./pages/AProposPage";
 import ValidationInscriptionsPage from "./pages/ValidationInscriptionsPage";
 import DemandeInscriptionPage from "./pages/DemandeInscriptionPage";
+import GestionPharmaciePage from "./pages/GestionPharmaciePage";
+import GestionHopitalPage from "./pages/GestionHopitalPage";
+import GestionCentreSantePage from "./pages/GestionCentreSantePage";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from './store/authStore';
@@ -50,6 +53,9 @@ function AppContent() {
         <Route path="/parametres" element={<ParametresPage />} />
         <Route path="/profil" element={<ProfilPage />} />
         <Route path="/a-propos" element={<AProposPage />} />
+        <Route path="/gestion-pharmacie" element={<GestionPharmaciePage />} />
+        <Route path="/gestion-hopital" element={<GestionHopitalPage />} />
+        <Route path="/gestion-centre-sante" element={<GestionCentreSantePage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
