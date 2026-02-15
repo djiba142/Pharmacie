@@ -1,8 +1,14 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "pharmacie-guinee",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "author": "Djiba Kourouma",
+  "description": "Système de gestion pharmaceutique pour la Guinée",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/djiba142/Pharmacie.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
