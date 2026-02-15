@@ -243,8 +243,8 @@ const DashboardPage = () => {
                       <td className="py-3">
                         <Badge variant="outline" className={
                           isCritique ? 'bg-destructive/10 text-destructive border-destructive/30' :
-                          isAlerte ? 'bg-warning/10 text-warning border-warning/30' :
-                          'bg-success/10 text-success border-success/30'
+                            isAlerte ? 'bg-warning/10 text-warning border-warning/30' :
+                              'bg-success/10 text-success border-success/30'
                         }>
                           {isCritique ? '🔴 Critique' : isAlerte ? '🟡 Alerte' : '🟢 Normal'}
                         </Badge>

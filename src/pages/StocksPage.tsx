@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserLevel } from '@/hooks/useUserLevel';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,12 +37,14 @@ const statusConfig: Record<StockStatus, { label: string; className: string }> = 
 
 const StocksPage = () => {
   const { level, entityId } = useUserLevel();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('medicament');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [detailDialog, setDetailDialog] = useState<string | null>(null);
   const [adjustDialog, setAdjustDialog] = useState<string | null>(null);
+  const [createDialog, setCreateDialog] = useState(false);
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustMotif, setAdjustMotif] = useState('');
   const { toast } = useToast();
@@ -123,11 +125,63 @@ const StocksPage = () => {
     else { setSortBy(col); setSortDir('asc'); }
   };
 
-  const handleAdjust = () => {
-    toast({ title: 'Stock ajusté', description: `Quantité modifiée de ${adjustQty} unités. Motif: ${adjustMotif}` });
-    setAdjustDialog(null);
-    setAdjustQty('');
-    setAdjustMotif('');
+  const handleAdjust = async () => {
+    if (!adjustDialog || !adjustQty || !adjustMotif) return;
+
+    try {
+      const stock = stocks.find((s: any) => s.id === adjustDialog);
+      if (!stock) throw new Error('Stock introuvable');
+
+      const adjustment = parseInt(adjustQty);
+      const newQuantity = stock.quantite_actuelle + adjustment;
+
+      if (newQuantity < 0) {
+        toast({
+          title: 'Erreur',
+          description: 'La quantité ne peut pas être négative',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update stock quantity
+      const { error: updateError } = await supabase
+        .from('stocks')
+        .update({ quantite_actuelle: newQuantity })
+        .eq('id', adjustDialog);
+
+      if (updateError) throw updateError;
+
+      // Log the movement
+      const { error: movementError } = await supabase
+        .from('mouvements_stock')
+        .insert({
+          stock_id: adjustDialog,
+          type: adjustment > 0 ? 'ENTREE' : 'SORTIE',
+          quantite: Math.abs(adjustment),
+          commentaire: adjustMotif,
+        });
+
+      if (movementError) console.warn('Movement log failed:', movementError);
+
+      toast({
+        title: 'Stock ajusté',
+        description: `Quantité ${adjustment > 0 ? 'augmentée' : 'diminuée'} de ${Math.abs(adjustment)} unités`
+      });
+
+      // Refresh data smoothly without page reload
+      await queryClient.invalidateQueries({ queryKey: ['stocks-page'] });
+
+      setAdjustDialog(null);
+      setAdjustQty('');
+      setAdjustMotif('');
+    } catch (err: any) {
+      toast({
+        title: 'Erreur',
+        description: err.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const detailStock = stocks.find((s: any) => s.id === detailDialog);
@@ -145,7 +199,7 @@ const StocksPage = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" /> Exporter</Button>
-          <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Nouveau mouvement</Button>
+          <Button size="sm" onClick={() => setCreateDialog(true)}><Plus className="h-4 w-4 mr-2" /> Nouveau mouvement</Button>
         </div>
       </div>
 
@@ -293,6 +347,36 @@ const StocksPage = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustDialog(null)}>Annuler</Button>
             <Button onClick={handleAdjust} disabled={!adjustQty || !adjustMotif}>Confirmer l'ajustement</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Movement Dialog */}
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="font-display">Nouveau mouvement de stock</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-info/10 border border-info/20 rounded-lg p-3 text-sm text-info">
+              <p className="font-medium">💡 Astuce</p>
+              <p className="text-xs mt-1">Pour créer un nouveau mouvement de stock, utilisez plutôt les pages de gestion par structure (Pharmacie, Hôpital, Centre de Santé) qui offrent une interface complète.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Accès rapide</Label>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" className="justify-start" onClick={() => { setCreateDialog(false); window.location.href = '/gestion-pharmacie'; }}>
+                  📦 Gestion Pharmacie
+                </Button>
+                <Button variant="outline" className="justify-start" onClick={() => { setCreateDialog(false); window.location.href = '/gestion-hopital'; }}>
+                  🏥 Gestion Hôpital
+                </Button>
+                <Button variant="outline" className="justify-start" onClick={() => { setCreateDialog(false); window.location.href = '/gestion-centre-sante'; }}>
+                  ⚕️ Gestion Centre de Santé
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

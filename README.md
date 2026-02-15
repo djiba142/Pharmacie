@@ -1,73 +1,75 @@
-# Welcome to your Lovable project
+# Pharmacie - Système de Gestion
 
-## Project info
+Application web de gestion de pharmacie développée avec React, TypeScript et Supabase.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Démarrage rapide
 
-## How can I edit this code?
+### Prérequis
 
-There are several ways of editing your application.
+- Node.js (version 18 ou supérieure)
+- npm ou bun
 
-**Use Lovable**
+### Installation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+# Installer les dépendances
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Démarrer le serveur de développement
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+L'application sera accessible sur `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📦 Scripts disponibles
 
-**Use GitHub Codespaces**
+- `npm run dev` - Démarre le serveur de développement
+- `npm run build` - Compile l'application pour la production
+- `npm run build:dev` - Compile l'application en mode développement
+- `npm run preview` - Prévisualise la version de production
+- `npm run lint` - Vérifie le code avec ESLint
+- `npm test` - Lance les tests
+- `npm run test:watch` - Lance les tests en mode watch
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🛠️ Technologies utilisées
 
-## What technologies are used for this project?
+- **React 18** - Framework UI
+- **TypeScript** - Typage statique
+- **Vite** - Build tool et dev server
+- **Supabase** - Backend et base de données
+- **TanStack Query** - Gestion des données asynchrones
+- **React Router** - Routing
+- **Radix UI** - Composants UI accessibles
+- **Tailwind CSS** - Styling
+- **Shadcn/ui** - Composants UI
+- **Zustand** - Gestion d'état
+- **React Hook Form** - Gestion des formulaires
+- **Zod** - Validation de schémas
 
-This project is built with:
+## 📁 Structure du projet
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+pharmacie/
+├── src/
+│   ├── components/     # Composants réutilisables
+│   ├── pages/         # Pages de l'application
+│   ├── hooks/         # Hooks personnalisés
+│   ├── lib/           # Utilitaires et configurations
+│   └── types/         # Types TypeScript
+├── public/            # Fichiers statiques
+├── supabase/          # Configuration Supabase
+└── ...
+```
 
-## How can I deploy this project?
+## 🔧 Configuration
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Créez un fichier `.env` à la racine du projet avec les variables suivantes :
 
-## Can I connect a custom domain to my Lovable project?
+```env
+VITE_SUPABASE_URL=votre_url_supabase
+VITE_SUPABASE_ANON_KEY=votre_clé_anonyme_supabase
+```
 
-Yes, you can!
+## 📝 Licence
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Ce projet est privé et propriétaire.

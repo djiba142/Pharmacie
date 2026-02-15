@@ -129,19 +129,47 @@ const UsersPage = () => {
       if (!authData.user) throw new Error('Erreur création utilisateur');
 
       const userId = authData.user.id;
+      console.log('User created with ID:', userId);
+
+      // Wait for the trigger to create the profile (retry up to 5 times with 500ms delay)
+      let profile = null;
+      for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const { data } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+        if (data) {
+          profile = data;
+          console.log('Profile found:', profile);
+          break;
+        }
+        console.log(`Profile not found yet, retry ${i + 1}/5`);
+      }
+
+      if (!profile) {
+        throw new Error('Le profil n\'a pas pu être créé automatiquement. Contactez l\'administrateur.');
+      }
 
       // Update profile with additional data
-      await supabase.from('profiles').update({
+      const { error: updateError } = await supabase.from('profiles').update({
         phone: form.phone || null,
         entity_type: ENTITY_TYPES_FOR_ROLE[form.role] || null,
         entity_id: form.entityId || null,
       }).eq('user_id', userId);
 
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
+      }
+
       // Assign role
-      await supabase.from('user_roles').insert({
+      const { error: roleError } = await supabase.from('user_roles').insert({
         user_id: userId,
         role: form.role as any,
       });
+
+      if (roleError) {
+        console.error('Error assigning role:', roleError);
+        throw roleError;
+      }
 
       toast({
         title: 'Utilisateur créé',
@@ -152,6 +180,7 @@ const UsersPage = () => {
       setForm({ firstName: '', lastName: '', email: '', phone: '', role: '', entityId: '', autoPassword: true, forceChange: true, sendEmail: true });
       fetchUsers();
     } catch (err: any) {
+      console.error('Error creating user:', err);
       toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
     }
   };

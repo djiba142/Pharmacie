@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -30,14 +30,22 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (useAuthStore.getState().isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]); // logic handled by store subscription ideally, or check on mount/update
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
+      // login now waits for profile fetch
       const result = await login(email, password);
       if (result.success) {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         setError(result.error || 'Email ou mot de passe incorrect');
       }
@@ -57,7 +65,7 @@ const LoginPage = () => {
         <div className="relative z-10">
           <img src={logoLivramed} alt="LivraMed" className="h-16 w-16 rounded-xl" />
           <h1 className="mt-8 text-4xl font-display font-bold text-primary-foreground leading-tight">
-            Plateforme Nationale de Gestion des Médicaments
+            Plateforme Nationale de Gestion Pharmaceutique
           </h1>
           <p className="mt-4 text-lg text-primary-foreground/80 max-w-md">
             Système intégré de gestion, suivi et distribution pharmaceutique pour la République de Guinée.

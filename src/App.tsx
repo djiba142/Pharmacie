@@ -24,6 +24,14 @@ import GestionHopitalPage from "./pages/GestionHopitalPage";
 import GestionCentreSantePage from "./pages/GestionCentreSantePage";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
+import ContactPage from "./pages/ContactPage";
+import DocumentationPage from "./pages/DocumentationPage";
+import MentionsLegalesPage from "./pages/MentionsLegalesPage";
+import ConfidentialitePage from "./pages/ConfidentialitePage";
+import CGUPage from "./pages/CGUPage";
+import CookiesPage from "./pages/CookiesPage";
+import FAQPage from "./pages/FAQPage";
+import GuidePage from "./pages/GuidePage";
 import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient();
@@ -40,6 +48,14 @@ function AppContent() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/inscription" element={<DemandeInscriptionPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/documentation" element={<DocumentationPage />} />
+      <Route path="/mentions-legales" element={<MentionsLegalesPage />} />
+      <Route path="/confidentialite" element={<ConfidentialitePage />} />
+      <Route path="/cgu" element={<CGUPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/faq" element={<FAQPage />} />
+      <Route path="/guide" element={<GuidePage />} />
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/stocks" element={<StocksPage />} />

@@ -18,6 +18,35 @@ export default {
         display: ["Plus Jakarta Sans", "sans-serif"],
       },
       colors: {
+        // Couleurs nationales de la Guinée 🇬🇳
+        'gn-red': {
+          DEFAULT: '#CE1126',
+          light: '#E63946',
+          dark: '#A00E1E',
+        },
+        'gn-yellow': {
+          DEFAULT: '#FCD116',
+          light: '#FFE066',
+          dark: '#D4A800',
+        },
+        'gn-green': {
+          DEFAULT: '#009460',
+          light: '#00B377',
+          dark: '#007A4D',
+        },
+
+        // Couleurs gouvernementales
+        'gov-blue': {
+          DEFAULT: '#0055A4',
+          light: '#0066CC',
+          dark: '#003D7A',
+        },
+        'gov-gray': {
+          DEFAULT: '#2C3E50',
+          light: '#34495E',
+          dark: '#1A252F',
+        },
+
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

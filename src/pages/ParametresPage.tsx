@@ -11,12 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Building2, MapPin, Plus, Edit, Eye } from 'lucide-react';
+import { Settings, Building2, MapPin, Plus, Edit, Eye, Palette } from 'lucide-react';
+import { ThemeSelector } from '@/components/ui/theme-selector';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ParametresPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('drs');
+  const [notifications, setNotifications] = useState(true);
+  const [language, setLanguage] = useState('fr');
+  const [dateFormat, setDateFormat] = useState('dd/MM/yyyy');
   const [showDrsForm, setShowDrsForm] = useState(false);
   const [showDpsForm, setShowDpsForm] = useState(false);
   const [editDrs, setEditDrs] = useState<any>(null);
@@ -123,10 +129,84 @@ export default function ParametresPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="preferences">Préférences</TabsTrigger>
           <TabsTrigger value="drs">DRS (Régions)</TabsTrigger>
           <TabsTrigger value="dps">DPS (Préfectures)</TabsTrigger>
           <TabsTrigger value="structures">Structures</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="preferences" className="space-y-4">
+          <ThemeSelector />
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-display font-semibold">Notifications</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Gérez vos préférences de notifications
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="notifications">Activer les notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Recevoir des notifications pour les mises à jour importantes
+                    </p>
+                  </div>
+                  <Switch
+                    id="notifications"
+                    checked={notifications}
+                    onCheckedChange={setNotifications}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-display font-semibold">Langue et région</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Personnalisez la langue et le format de date
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Langue</Label>
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fr">Français</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Format de date</Label>
+                    <Select value={dateFormat} onValueChange={setDateFormat}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dd/MM/yyyy">JJ/MM/AAAA</SelectItem>
+                        <SelectItem value="MM/dd/yyyy">MM/JJ/AAAA</SelectItem>
+                        <SelectItem value="yyyy-MM-dd">AAAA-MM-JJ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="drs" className="space-y-4">
           <div className="flex justify-end">
@@ -220,15 +300,15 @@ export default function ParametresPage() {
           <DialogHeader><DialogTitle className="font-display">{editDrs ? 'Modifier la DRS' : 'Ajouter une DRS'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Nom *</Label><Input value={drsForm.nom} onChange={e => setDrsForm({...drsForm, nom: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Code *</Label><Input value={drsForm.code} onChange={e => setDrsForm({...drsForm, code: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Nom *</Label><Input value={drsForm.nom} onChange={e => setDrsForm({ ...drsForm, nom: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Code *</Label><Input value={drsForm.code} onChange={e => setDrsForm({ ...drsForm, code: e.target.value })} /></div>
             </div>
-            <div className="space-y-2"><Label>Région *</Label><Input value={drsForm.region} onChange={e => setDrsForm({...drsForm, region: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Région *</Label><Input value={drsForm.region} onChange={e => setDrsForm({ ...drsForm, region: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Email</Label><Input type="email" value={drsForm.email} onChange={e => setDrsForm({...drsForm, email: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Téléphone</Label><Input value={drsForm.telephone} onChange={e => setDrsForm({...drsForm, telephone: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Email</Label><Input type="email" value={drsForm.email} onChange={e => setDrsForm({ ...drsForm, email: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Téléphone</Label><Input value={drsForm.telephone} onChange={e => setDrsForm({ ...drsForm, telephone: e.target.value })} /></div>
             </div>
-            <div className="space-y-2"><Label>Adresse</Label><Input value={drsForm.adresse} onChange={e => setDrsForm({...drsForm, adresse: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Adresse</Label><Input value={drsForm.adresse} onChange={e => setDrsForm({ ...drsForm, adresse: e.target.value })} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDrsForm(false)}>Annuler</Button>
@@ -245,21 +325,21 @@ export default function ParametresPage() {
           <DialogHeader><DialogTitle className="font-display">{editDps ? 'Modifier la DPS' : 'Ajouter une DPS'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Nom *</Label><Input value={dpsForm.nom} onChange={e => setDpsForm({...dpsForm, nom: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Code *</Label><Input value={dpsForm.code} onChange={e => setDpsForm({...dpsForm, code: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Nom *</Label><Input value={dpsForm.nom} onChange={e => setDpsForm({ ...dpsForm, nom: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Code *</Label><Input value={dpsForm.code} onChange={e => setDpsForm({ ...dpsForm, code: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Préfecture *</Label><Input value={dpsForm.prefecture} onChange={e => setDpsForm({...dpsForm, prefecture: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Préfecture *</Label><Input value={dpsForm.prefecture} onChange={e => setDpsForm({ ...dpsForm, prefecture: e.target.value })} /></div>
               <div className="space-y-2"><Label>DRS *</Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={dpsForm.drs_id} onChange={e => setDpsForm({...dpsForm, drs_id: e.target.value})}>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={dpsForm.drs_id} onChange={e => setDpsForm({ ...dpsForm, drs_id: e.target.value })}>
                   <option value="">Sélectionner</option>
                   {drsList.map((d: any) => <option key={d.id} value={d.id}>{d.nom}</option>)}
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Email</Label><Input type="email" value={dpsForm.email} onChange={e => setDpsForm({...dpsForm, email: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Téléphone</Label><Input value={dpsForm.telephone} onChange={e => setDpsForm({...dpsForm, telephone: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Email</Label><Input type="email" value={dpsForm.email} onChange={e => setDpsForm({ ...dpsForm, email: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Téléphone</Label><Input value={dpsForm.telephone} onChange={e => setDpsForm({ ...dpsForm, telephone: e.target.value })} /></div>
             </div>
           </div>
           <DialogFooter>

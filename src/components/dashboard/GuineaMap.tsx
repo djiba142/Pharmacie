@@ -1,181 +1,332 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, MapPin, AlertTriangle, Building2, MapPinned } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
+// ----------------------------------------------------------------------
+// 1. CONFIGURATION DES ICÔNES
+// ----------------------------------------------------------------------
+
+// Fix pour les icônes Leaflet par défaut
+const DefaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Interface des données
 interface DrsData {
   id: string;
-  nom: string;
-  code: string;
+  nom?: string;
+  code?: string;
   region: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
 }
 
-// SVG coordinates for Guinea regions (simplified positioning)
-const regionPositions: Record<string, { x: number; y: number }> = {
-  'Conakry':    { x: 80, y: 230 },
-  'Kindia':     { x: 130, y: 195 },
-  'Boké':       { x: 75, y: 140 },
-  'Mamou':      { x: 180, y: 170 },
-  'Labé':       { x: 165, y: 110 },
-  'Faranah':    { x: 260, y: 200 },
-  'Kankan':     { x: 340, y: 165 },
-  'N\'Zérékoré': { x: 290, y: 280 },
+// Interface pour les statistiques (simulées ou réelles)
+interface RegionStats {
+  stocks: number;
+  alertes: number;
+  commandes: number;
+}
+
+// ----------------------------------------------------------------------
+// 2. COORDONNÉES ET DONNÉES GÉOGRAPHIQUES (CORRIGÉES)
+// ----------------------------------------------------------------------
+
+// Coordonnées GPS exactes fournies par l'utilisateur
+const regionCoordinates: Record<string, { lat: number; lng: number; label: string }> = {
+  // --- Siège & Agences Principales (GPS Précis) ---
+  'conakry': {
+    lat: 9.545984,
+    lng: -13.671068,
+    label: "Siège Social - Dixinn Mosquée, près Stade 28 Septembre"
+  },
+  'kankan': {
+    lat: 10.367947,
+    lng: -9.305960,
+    label: "Pharmacie Centrale de Guinée Kankan"
+  },
+
+  // --- Agences Régionales (Localisation par quartier) ---
+  'mamou': {
+    lat: 10.3759, // Coordonnées centre-ville Mamou
+    lng: -12.0909,
+    label: "Agence Régionale - Quartier Petel 2, commune urbaine"
+  },
+  'nzerekore': {
+    lat: 7.7562,
+    lng: -8.8179,
+    label: "Agence Régionale - À plus de 800 km de Conakry"
+  },
+  'n\'zérékoré': { // Alias pour compatibilité
+    lat: 7.7562,
+    lng: -8.8179,
+    label: "Agence Régionale - À plus de 800 km de Conakry"
+  },
+
+  // --- Autres Agences (Centres urbains) ---
+  'kindia': { lat: 10.0568, lng: -12.8646, label: "Agence Régionale Kindia" },
+  'boke': { lat: 10.9424, lng: -14.2918, label: "Agence Régionale Boké" },
+  'boké': { lat: 10.9424, lng: -14.2918, label: "Agence Régionale Boké" },
+  'labe': { lat: 11.3180, lng: -12.2895, label: "Agence Régionale Labé" },
+  'labé': { lat: 11.3180, lng: -12.2895, label: "Agence Régionale Labé" },
+  'faranah': { lat: 10.0405, lng: -10.7408, label: "Agence Régionale Faranah" },
 };
 
-const mockStats: Record<string, { stocks: number; alertes: number; commandes: number }> = {
-  'Conakry':     { stocks: 12450, alertes: 3, commandes: 245 },
-  'Kindia':      { stocks: 4200, alertes: 5, commandes: 132 },
-  'Boké':        { stocks: 3800, alertes: 2, commandes: 98 },
-  'Mamou':       { stocks: 2100, alertes: 4, commandes: 54 },
-  'Labé':        { stocks: 2800, alertes: 1, commandes: 76 },
-  'Faranah':     { stocks: 1900, alertes: 6, commandes: 65 },
-  'Kankan':      { stocks: 3100, alertes: 3, commandes: 87 },
-  'N\'Zérékoré': { stocks: 4600, alertes: 7, commandes: 112 },
+// Données simulées pour l'exemple (à connecter à votre API si disponible)
+const mockStats: Record<string, RegionStats> = {
+  'conakry': { stocks: 15450, alertes: 2, commandes: 310 },
+  'kankan': { stocks: 5200, alertes: 4, commandes: 125 },
+  'kindia': { stocks: 4100, alertes: 1, commandes: 98 },
+  'mamou': { stocks: 2800, alertes: 5, commandes: 67 },
+  'nzerekore': { stocks: 6300, alertes: 3, commandes: 145 },
+  'n\'zérékoré': { stocks: 6300, alertes: 3, commandes: 145 },
+  'boke': { stocks: 3500, alertes: 2, commandes: 88 },
+  'boké': { stocks: 3500, alertes: 2, commandes: 88 },
+  'labe': { stocks: 3100, alertes: 0, commandes: 72 },
+  'labé': { stocks: 3100, alertes: 0, commandes: 72 },
+  'faranah': { stocks: 1950, alertes: 6, commandes: 45 },
 };
+
+// ----------------------------------------------------------------------
+// 3. COMPOSANTS UTILITAIRES
+// ----------------------------------------------------------------------
+
+// Générateur d'icônes SVG
+const createCustomIcon = (hasAlerts: boolean) => {
+  const color = hasAlerts ? '#ef4444' : '#0d9488'; // Rouge ou Teal
+  const svgIcon = `
+    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 0C7.2 0 0 7.2 0 16c0 8.8 16 26 16 26s16-17.2 16-26c0-8.8-7.2-16-16-16z" fill="${color}" stroke="white" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="6" fill="white"/>
+      ${hasAlerts ? '<circle cx="26" cy="6" r="4" fill="#ef4444" stroke="white" stroke-width="1"/>' : ''}
+    </svg>
+  `;
+
+  return L.divIcon({
+    html: svgIcon,
+    className: 'custom-marker-wrapper',
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
+    popupAnchor: [0, -42]
+  });
+};
+
+// Composant pour adapter le zoom (FitBounds)
+function FitBounds({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions && positions.length > 0) {
+      try {
+        const bounds = L.latLngBounds(positions);
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+        }
+      } catch (e) {
+        console.warn("Erreur fitBounds:", e);
+      }
+    }
+  }, [positions, map]);
+  return null;
+}
+
+// ----------------------------------------------------------------------
+// 4. COMPOSANT PRINCIPAL
+// ----------------------------------------------------------------------
 
 export default function GuineaMap() {
   const [drsData, setDrsData] = useState<DrsData[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: apiError } = await supabase.from('drs').select('*');
+      if (apiError) throw apiError;
+
+      if (data && data.length > 0) {
+        setDrsData(data as DrsData[]);
+      } else {
+        // Fallback si DB vide
+        const fallbackData = Object.keys(regionCoordinates).map((key, index) => ({
+          id: `static-${index}`,
+          region: key.charAt(0).toUpperCase() + key.slice(1),
+        }));
+        // Dédoublonnage
+        const uniqueRegions = fallbackData.filter((v, i, a) => a.findIndex(t => (t.region === v.region)) === i);
+        setDrsData(uniqueRegions as DrsData[]);
+      }
+    } catch (err: any) {
+      console.error("Erreur chargement carte:", err);
+      setError("Erreur chargement données");
+      // Mode secours
+      const fallbackData = Object.keys(regionCoordinates)
+        .filter(k => !k.includes('boke') && !k.includes('labe') && !k.includes('zere'))
+        .map((key, index) => ({
+          id: `fallback-${index}`,
+          region: key.charAt(0).toUpperCase() + key.slice(1),
+        }));
+      setDrsData(fallbackData as DrsData[]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    supabase.from('drs').select('*').then(({ data }) => {
-      if (data) setDrsData(data as DrsData[]);
-    });
+    loadData();
   }, []);
 
-  const selectedStats = selected ? mockStats[selected] : null;
+  // Fusion des données (DB + Coordonnées locales)
+  const markers = useMemo(() => {
+    return drsData.map(drs => {
+      if (!drs || !drs.region) return null;
+      const normalizedRegion = drs.region.trim().toLowerCase();
+
+      // Priorité 1: Coordonnées DB, Priorité 2: Coordonnées Locales
+      let lat = drs.latitude;
+      let lng = drs.longitude;
+      let label = "";
+
+      if (!lat || !lng) {
+        const coords = regionCoordinates[normalizedRegion];
+        if (coords) {
+          lat = coords.lat;
+          lng = coords.lng;
+          label = coords.label;
+        }
+      }
+
+      if (!lat || !lng) return null;
+
+      const stats = mockStats[normalizedRegion] || { stocks: 0, alertes: 0, commandes: 0 };
+
+      return { ...drs, lat, lng, stats, label };
+    }).filter((m): m is NonNullable<typeof m> => m !== null);
+  }, [drsData]);
+
+  const positions: [number, number][] = markers.map(m => [m.lat, m.lng]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" /> Chargement...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[500px] bg-muted animate-pulse rounded-lg" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden border shadow-sm">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm font-display flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
-          Carte des DRS — Guinée
+          Carte Nationale des Agences
         </CardTitle>
+        {error && <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" /> Hors ligne</Badge>}
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={loadData}>
+          <RefreshCw className="h-3 w-3" />
+        </Button>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Map SVG */}
-          <div className="flex-1 relative">
-            <svg viewBox="0 0 440 340" className="w-full h-auto">
-              {/* Guinea outline (simplified) */}
-              <path
-                d="M60,80 L120,50 L180,45 L210,60 L250,55 L300,70 L370,90 L400,120 L390,160 L380,190 L360,220 L340,240 L320,260 L300,290 L270,310 L240,300 L210,290 L190,260 L160,240 L130,230 L100,240 L70,260 L50,240 L40,200 L45,160 L50,120 L60,80Z"
-                fill="hsl(174, 55%, 95%)"
-                stroke="hsl(174, 55%, 38%)"
-                strokeWidth="1.5"
-              />
 
-              {/* Region boundaries (simplified) */}
-              <path d="M120,50 L130,140 L50,160" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
-              <path d="M130,140 L210,140 L210,60" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
-              <path d="M210,140 L130,230" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
-              <path d="M210,140 L300,140 L300,70" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
-              <path d="M210,140 L210,240 L300,290" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
-              <path d="M300,140 L300,290" stroke="hsl(170, 15%, 80%)" strokeWidth="0.5" fill="none" />
+      <CardContent className="p-0 sm:p-6 sm:pt-0">
+        <div className="h-[500px] rounded-lg overflow-hidden border relative z-0">
+          <MapContainer
+            center={[9.6, -13.6]}
+            zoom={7}
+            style={{ height: '100%', width: '100%', zIndex: 0 }}
+            scrollWheelZoom={true}
+          >
+            {/* Google Maps Layer (Plan propre) */}
+            <TileLayer
+              attribution='&copy; Google Maps'
+              url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+              subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+            />
 
-              {/* DRS Markers */}
-              {(drsData.length > 0 ? drsData : Object.keys(regionPositions).map(r => ({ region: r } as DrsData))).map((drs) => {
-                const pos = regionPositions[drs.region];
-                if (!pos) return null;
-                const stats = mockStats[drs.region];
-                const hasAlerts = stats && stats.alertes > 3;
-                const isSelected = selected === drs.region;
+            <FitBounds positions={positions} />
 
-                return (
-                  <g
-                    key={drs.region}
-                    onClick={() => setSelected(isSelected ? null : drs.region)}
-                    className="cursor-pointer"
-                  >
-                    {/* Pulse animation for alerts */}
-                    {hasAlerts && (
-                      <circle cx={pos.x} cy={pos.y} r="16" fill="hsl(0, 72%, 51%)" opacity="0.15">
-                        <animate attributeName="r" values="16;22;16" dur="2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.15;0.05;0.15" dur="2s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                    {/* Marker circle */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={isSelected ? 12 : 9}
-                      fill={hasAlerts ? 'hsl(0, 72%, 51%)' : 'hsl(174, 55%, 38%)'}
-                      stroke="white"
-                      strokeWidth="2"
-                      opacity={isSelected ? 1 : 0.85}
-                    />
-                    {/* Label */}
-                    <text
-                      x={pos.x}
-                      y={pos.y - 16}
-                      textAnchor="middle"
-                      fontSize="9"
-                      fontWeight={isSelected ? '700' : '500'}
-                      fill="hsl(170, 30%, 20%)"
-                      fontFamily="Inter, sans-serif"
-                    >
-                      {drs.region}
-                    </text>
-                    {/* Stock count inside circle */}
-                    <text
-                      x={pos.x}
-                      y={pos.y + 3}
-                      textAnchor="middle"
-                      fontSize="6"
-                      fontWeight="700"
-                      fill="white"
-                      fontFamily="Inter, sans-serif"
-                    >
-                      {stats ? Math.round(stats.stocks / 1000) + 'k' : ''}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
+            {markers.map((marker, index) => {
+              const hasAlerts = marker.stats.alertes > 3;
+              return (
+                <Marker
+                  key={`${marker.id}-${index}`}
+                  position={[marker.lat, marker.lng]}
+                  icon={createCustomIcon(hasAlerts)}
+                >
+                  <Popup>
+                    <div className="p-1 min-w-[220px]">
+                      <div className="flex flex-col mb-2 border-b pb-2">
+                        <h4 className="font-display font-bold text-base text-primary flex items-center gap-2">
+                          {marker.region}
+                        </h4>
+                        {/* Affichage de l'adresse spécifique si disponible */}
+                        {marker.label && (
+                          <div className="flex items-start gap-1.5 mt-1 text-xs text-muted-foreground bg-muted/40 p-1 rounded">
+                            <MapPinned className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            <span>{marker.label}</span>
+                          </div>
+                        )}
+                        {!marker.label && marker.code && (
+                          <span className="text-[10px] text-muted-foreground font-mono mt-1">{marker.code}</span>
+                        )}
+                      </div>
 
-          {/* Info panel */}
-          <div className="w-full lg:w-48 space-y-3">
-            {selected && selectedStats ? (
-              <div className="space-y-3 animate-fade-in">
-                <h4 className="font-display font-semibold text-sm">DRS {selected}</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Stocks</span>
-                    <span className="font-semibold">{selectedStats.stocks.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Commandes</span>
-                    <span className="font-semibold">{selectedStats.commandes}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Alertes</span>
-                    <Badge variant={selectedStats.alertes > 3 ? 'destructive' : 'secondary'} className="text-[10px] h-5">
-                      {selectedStats.alertes}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">
-                <p className="font-medium mb-2">Légende</p>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-primary" />
-                    <span>DRS normal</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-destructive" />
-                    <span>Alertes (&gt;3)</span>
-                  </div>
-                </div>
-                <p className="mt-3 text-muted-foreground/60">Cliquez sur une DRS pour voir les détails</p>
-              </div>
-            )}
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground text-xs">Stocks disp.</span>
+                          <span className="font-bold font-mono">{marker.stats.stocks.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground text-xs">Commandes</span>
+                          <span className="font-medium">{marker.stats.commandes}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-muted-foreground text-xs">État du stock</span>
+                          <Badge
+                            variant={hasAlerts ? 'destructive' : 'outline'}
+                            className={`text-[10px] h-5 ${!hasAlerts ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : ''}`}
+                          >
+                            {hasAlerts ? 'Critique' : 'Normal'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MapContainer>
+
+          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur p-2.5 rounded-lg border shadow-lg z-[1000] text-xs space-y-2">
+            <div className="font-semibold text-muted-foreground mb-1">État des Agences</div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-[#0d9488]" />
+              <span>Stock Normal</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-[#ef4444]" />
+              <span>Alerte Stock ({'>'}3)</span>
+            </div>
           </div>
         </div>
       </CardContent>

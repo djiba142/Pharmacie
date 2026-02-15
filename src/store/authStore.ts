@@ -36,49 +36,83 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await get().fetchProfile(session.user.id);
+      } else {
+        // No session, set loading to false immediately
+        set({ loading: false });
       }
     } catch (err) {
       console.error('Auth init error:', err);
-    } finally {
       set({ loading: false });
     }
 
+    // Listen for auth changes but don't interfere with initial load
     supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         await get().fetchProfile(session.user.id);
       } else {
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, loading: false });
       }
     });
   },
 
   fetchProfile: async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        set({ user: null, isAuthenticated: false, loading: false });
+        return;
+      }
 
-    if (profile) {
+      if (!profile) {
+        console.error('No profile found for user:', userId);
+        set({ user: null, isAuthenticated: false, loading: false });
+        return;
+      }
+
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error fetching role:', roleError);
+      }
+
       set({
         user: {
           ...profile,
           role: roleData?.role || undefined,
         } as UserProfile,
         isAuthenticated: true,
+        loading: false,
       });
+    } catch (err) {
+      console.error('Unexpected error in fetchProfile:', err);
+      set({ user: null, isAuthenticated: false, loading: false });
     }
   },
 
   login: async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { success: false, error: error.message };
+
+    if (data.user) {
+      // Wait for profile to be loaded before returning success
+      await get().fetchProfile(data.user.id);
+    }
+
+    // Check if we are actually authenticated now (profile loaded)
+    if (!get().isAuthenticated) {
+      return { success: false, error: "Impossible de charger le profil utilisateur. Contactez l'administrateur." };
+    }
+
     return { success: true };
   },
 
