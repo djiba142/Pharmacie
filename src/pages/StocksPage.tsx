@@ -94,7 +94,7 @@ const StocksPage = () => {
   const categories = [...new Set(stocks.map((s: any) => s.categorie).filter(Boolean))];
 
   const filteredStocks = useMemo(() => {
-    let result = stocks.filter((s: any) => {
+    const result = stocks.filter((s: any) => {
       const matchSearch = s.medicament.toLowerCase().includes(search.toLowerCase()) ||
         s.lot.toLowerCase().includes(search.toLowerCase());
       const status = getStatus(s);

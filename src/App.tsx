@@ -32,6 +32,7 @@ import CGUPage from "./pages/CGUPage";
 import CookiesPage from "./pages/CookiesPage";
 import FAQPage from "./pages/FAQPage";
 import GuidePage from "./pages/GuidePage";
+import AuditPage from "./pages/AuditPage";
 import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ function AppContent() {
         <Route path="/utilisateurs" element={<UsersPage />} />
         <Route path="/validation-inscriptions" element={<ValidationInscriptionsPage />} />
         <Route path="/parametres" element={<ParametresPage />} />
+        <Route path="/audit" element={<AuditPage />} />
         <Route path="/profil" element={<ProfilPage />} />
         <Route path="/a-propos" element={<AProposPage />} />
         <Route path="/gestion-pharmacie" element={<GestionPharmaciePage />} />

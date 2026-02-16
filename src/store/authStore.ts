@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { logAction } from '@/services/logService';
 
 export interface UserProfile {
   id: string;
@@ -101,11 +102,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      // Optionally log failed attempts if needed, but be careful with security (don't log password)
+      // await logAction({ action: 'LOGIN_FAILED', entityType: 'AUTH', details: { email, error: error.message } });
+      return { success: false, error: error.message };
+    }
 
     if (data.user) {
       // Wait for profile to be loaded before returning success
       await get().fetchProfile(data.user.id);
+
+      // Log successful login
+      const userProfile = get().user;
+      if (userProfile) {
+        logAction({
+          action: 'LOGIN',
+          entityType: 'AUTH',
+          entityId: data.user.id,
+          details: {
+            role: userProfile.role,
+            name: `${userProfile.first_name} ${userProfile.last_name}`
+          }
+        });
+      }
     }
 
     // Check if we are actually authenticated now (profile loaded)
@@ -130,6 +149,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const user = get().user;
+    if (user) {
+      await logAction({
+        action: 'LOGOUT',
+        entityType: 'AUTH',
+        entityId: user.id
+      });
+    }
     await supabase.auth.signOut();
     set({ user: null, isAuthenticated: false });
   },

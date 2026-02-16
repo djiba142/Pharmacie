@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Truck, AlertTriangle,
   BarChart3, Users, Settings, LogOut, Pill, ClipboardCheck, User, Info,
-  Building2, Hospital, HeartPulse,
+  Building2, Hospital, HeartPulse, Shield,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
@@ -33,6 +33,7 @@ const mainNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { title: 'Utilisateurs', url: '/utilisateurs', icon: Users },
   { title: 'Inscriptions', url: '/validation-inscriptions', icon: ClipboardCheck },
+  { title: 'Journal d\'Audit', url: '/audit', icon: Shield },
   { title: 'Paramètres', url: '/parametres', icon: Settings },
 ];
 

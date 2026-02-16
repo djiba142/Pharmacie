@@ -19,7 +19,7 @@ const PREFECTORAL_ROLES = [
   'LIVREUR_DPS',
 ];
 
-// Everything else is peripheral (HOP, CS, CLIN, PHARM, etc.)
+// Tout le reste est périphérique (HOP, CS, CLIN, PHARM, etc.)
 
 export function getUserLevel(role?: string): UserLevel {
   if (!role) return 'peripheral';

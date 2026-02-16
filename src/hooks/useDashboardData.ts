@@ -1,6 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserLevel } from '@/hooks/useUserLevel';
+import { DRS } from '@/hooks/useNationalData';
+
+interface StockData {
+  id: string;
+  entite_id: string;
+  quantite_actuelle: number;
+  seuil_alerte: number;
+  seuil_minimal: number;
+  lots?: {
+    medicament_id: string;
+    date_peremption: string;
+  };
+}
 
 export interface DashboardStats {
   totalStocks: number;
@@ -20,13 +33,13 @@ export interface RegionStockSummary {
 }
 
 export function useDashboardData(level: UserLevel, entityId?: string) {
-  // Fetch stocks with related lot + medicament info
+  // Récupérer les stocks avec les informations liées au lot et au médicament
   const stocksQuery = useQuery({
     queryKey: ['dashboard-stocks', level, entityId],
     queryFn: async () => {
       let query = supabase.from('stocks').select('*, lots!inner(*, medicaments!inner(*))');
 
-      // Filter by entity for non-national levels
+      // Filtrer par entité pour les niveaux non nationaux
       if (level === 'regional' && entityId) {
         query = query.eq('entite_type', 'DRS').eq('entite_id', entityId);
       } else if (level === 'prefectoral' && entityId) {
@@ -41,7 +54,7 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
     },
   });
 
-  // Fetch structures count
+  // Récupérer le nombre de structures
   const structuresQuery = useQuery({
     queryKey: ['dashboard-structures', level, entityId],
     queryFn: async () => {
@@ -50,7 +63,7 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
       if (level === 'prefectoral' && entityId) {
         query = query.eq('dps_id', entityId);
       }
-      // For regional, we'd need to join DPS->DRS, but for now fetch all and filter client-side
+      // Pour le niveau régional, nous devrions joindre DPS->DRS, mais pour l'instant récupérer tout et filtrer côté client
 
       const { count, error } = await query;
       if (error) throw error;
@@ -58,7 +71,7 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
     },
   });
 
-  // Fetch DRS for regional summary
+  // Récupérer les DRS pour le résumé régional
   const drsQuery = useQuery({
     queryKey: ['dashboard-drs'],
     queryFn: async () => {
@@ -69,7 +82,7 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
     enabled: level === 'national',
   });
 
-  // Fetch DPS for prefectoral view
+  // Récupérer les DPS pour la vue préfectorale
   const dpsQuery = useQuery({
     queryKey: ['dashboard-dps', entityId],
     queryFn: async () => {
@@ -84,7 +97,7 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
 
   const isLoading = stocksQuery.isLoading || structuresQuery.isLoading;
 
-  // Compute stats from stocks data
+  // Calculer les statistiques à partir des données de stocks
   const stocks = stocksQuery.data || [];
   const now = new Date();
   const in3Months = new Date();
@@ -92,25 +105,26 @@ export function useDashboardData(level: UserLevel, entityId?: string) {
 
   const stats: DashboardStats = {
     totalStocks: stocks.length,
-    stocksEnAlerte: stocks.filter((s: any) => s.quantite_actuelle <= s.seuil_alerte && s.quantite_actuelle > s.seuil_minimal).length,
-    stocksCritiques: stocks.filter((s: any) => s.quantite_actuelle <= s.seuil_minimal).length,
-    totalMedicaments: new Set(stocks.map((s: any) => s.lots?.medicament_id)).size,
+    stocksEnAlerte: stocks.filter((s: StockData) => s.quantite_actuelle <= s.seuil_alerte && s.quantite_actuelle > s.seuil_minimal).length,
+    stocksCritiques: stocks.filter((s: StockData) => s.quantite_actuelle <= s.seuil_minimal).length,
+    totalMedicaments: new Set(stocks.map((s: StockData) => s.lots?.medicament_id)).size,
     totalStructures: structuresQuery.data || 0,
     totalLots: stocks.length,
-    lotsPerimes: stocks.filter((s: any) => new Date(s.lots?.date_peremption) < now).length,
-    lotsBientotPerimes: stocks.filter((s: any) => {
-      const exp = new Date(s.lots?.date_peremption);
+    lotsPerimes: stocks.filter((s: StockData) => new Date(s.lots?.date_peremption || '').getTime() < now.getTime()).length,
+    lotsBientotPerimes: stocks.filter((s: StockData) => {
+      if (!s.lots?.date_peremption) return false;
+      const exp = new Date(s.lots.date_peremption);
       return exp >= now && exp <= in3Months;
     }).length,
   };
 
-  // Group stocks by entite_id for regional chart
-  const regionSummary: RegionStockSummary[] = (drsQuery.data || []).map((drs: any) => {
-    const drsStocks = stocks.filter((s: any) => s.entite_id === drs.id);
+  // Grouper les stocks par entite_id pour le graphique régional
+  const regionSummary: RegionStockSummary[] = (drsQuery.data || []).map((drs: DRS) => {
+    const drsStocks = stocks.filter((s: StockData) => s.entite_id === drs.id);
     return {
       region: drs.nom.replace('DRS ', ''),
       total: drsStocks.length,
-      alertes: drsStocks.filter((s: any) => s.quantite_actuelle <= s.seuil_alerte).length,
+      alertes: drsStocks.filter((s: StockData) => s.quantite_actuelle <= s.seuil_alerte).length,
     };
   });
 
