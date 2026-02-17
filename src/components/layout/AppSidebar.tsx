@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Truck, AlertTriangle,
   BarChart3, Users, Settings, LogOut, Pill, ClipboardCheck, User, Info,
-  Building2, Hospital, HeartPulse, Shield,
+  Building2, Hospital, HeartPulse, Shield, Wallet, Coins, Receipt,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
@@ -43,12 +43,23 @@ const structureNav: NavItem[] = [
   { title: 'Centre de Santé', url: '/gestion-centre-sante', icon: HeartPulse },
 ];
 
+const financeNav: NavItem[] = [
+  { title: 'Tableau de bord', url: '/finance', icon: LayoutDashboard },
+  { title: 'Budget', url: '/finance/budget', icon: Wallet },
+  { title: 'Achats & Marchés', url: '/finance/achats', icon: ShoppingCart },
+  { title: 'Comptabilité', url: '/finance/comptabilite', icon: Receipt },
+  { title: 'Trésorerie', url: '/finance/tresorerie', icon: Coins },
+];
+
 const userNav: NavItem[] = [
   { title: 'Mon profil', url: '/profil', icon: User },
   { title: 'À propos', url: '/a-propos', icon: Info },
 ];
 
-const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN_CENTRAL', 'ADMIN_DRS', 'ADMIN_DPS'];
+const ADMIN_ROLES = [
+  'SUPER_ADMIN', 'ADMIN_CENTRAL', 'ADMIN_DRS', 'ADMIN_DPS',
+  'DAF_NATIONAL', 'COMPTABLE_NATIONAL', 'AUDITEUR_INTERNE', 'TRESORIER_NATIONAL'
+];
 
 export function AppSidebar() {
   const user = useAuthStore((s) => s.user);
@@ -103,6 +114,26 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminNav.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={linkClass} activeClassName={activeClass}>
+                        <item.icon className="h-4 w-4 shrink-0" /><span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Section Finance - Visible pour les rôles admin/finance */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest px-3">Finances</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {financeNav.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} className={linkClass} activeClassName={activeClass}>

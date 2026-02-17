@@ -33,6 +33,14 @@ import CookiesPage from "./pages/CookiesPage";
 import FAQPage from "./pages/FAQPage";
 import GuidePage from "./pages/GuidePage";
 import AuditPage from "./pages/AuditPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import FinanceDashboard from "./pages/finance/FinanceDashboard";
+import BudgetPage from "./pages/finance/BudgetPage";
+import PurchasingPage from "./pages/finance/PurchasingPage";
+import AccountingPage from "./pages/finance/AccountingPage";
+import TreasuryPage from "./pages/finance/TreasuryPage";
+import { AIChatWidget } from "./components/ai/AIChatWidget";
+import { CookieBanner } from "./components/CookieBanner";
 import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient();
@@ -48,6 +56,7 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/inscription" element={<DemandeInscriptionPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/documentation" element={<DocumentationPage />} />
@@ -74,6 +83,13 @@ function AppContent() {
         <Route path="/gestion-pharmacie" element={<GestionPharmaciePage />} />
         <Route path="/gestion-hopital" element={<GestionHopitalPage />} />
         <Route path="/gestion-centre-sante" element={<GestionCentreSantePage />} />
+
+        {/* Finance Routes */}
+        <Route path="/finance" element={<FinanceDashboard />} />
+        <Route path="/finance/budget" element={<BudgetPage />} />
+        <Route path="/finance/achats" element={<PurchasingPage />} />
+        <Route path="/finance/comptabilite" element={<AccountingPage />} />
+        <Route path="/finance/tresorerie" element={<TreasuryPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -87,6 +103,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AppContent />
+        <AIChatWidget />
+        <CookieBanner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -162,7 +162,9 @@ const StocksPage = () => {
           commentaire: adjustMotif,
         });
 
-      if (movementError) console.warn('Movement log failed:', movementError);
+      if (movementError) {
+        // Movement log failed silently
+      }
 
       toast({
         title: 'Stock ajusté',

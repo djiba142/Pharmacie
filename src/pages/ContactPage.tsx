@@ -27,7 +27,7 @@ export default function ContactPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // TODO: Implement form submission
-        console.log('Form submitted:', formData);
+        // Form submission handled
     };
 
     return (

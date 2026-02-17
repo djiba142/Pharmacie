@@ -37,6 +37,18 @@ export enum RoleCode {
   LIVREUR_DPS = 'LIVREUR_DPS',
   LIVREUR_HOP = 'LIVREUR_HOP',
   LIVREUR_PHARM_REDIST = 'LIVREUR_PHARM_REDIST',
+
+  // === ROLES FINANCIERS ===
+  DAF_NATIONAL = 'DAF_NATIONAL',
+  COMPTABLE_NATIONAL = 'COMPTABLE_NATIONAL',
+  AUDITEUR_INTERNE = 'AUDITEUR_INTERNE',
+  TRESORIER_NATIONAL = 'TRESORIER_NATIONAL',
+  DAF_DRS = 'DAF_DRS',
+  COMPTABLE_DRS = 'COMPTABLE_DRS',
+  GESTIONNAIRE_DPS = 'GESTIONNAIRE_DPS',
+  COMPTABLE_DPS = 'COMPTABLE_DPS',
+  COMPTABLE_HOP = 'COMPTABLE_HOP',
+  GESTIONNAIRE_CS = 'GESTIONNAIRE_CS',
 }
 
 export const ROLE_LABELS: Record<RoleCode, string> = {
@@ -78,6 +90,18 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   [RoleCode.LIVREUR_DPS]: 'Livreur DPS',
   [RoleCode.LIVREUR_HOP]: 'Livreur Hôpital',
   [RoleCode.LIVREUR_PHARM_REDIST]: 'Livreur Pharmacie',
+  
+  // Finance Labels
+  [RoleCode.DAF_NATIONAL]: 'DAF National',
+  [RoleCode.COMPTABLE_NATIONAL]: 'Comptable National',
+  [RoleCode.AUDITEUR_INTERNE]: 'Auditeur Interne',
+  [RoleCode.TRESORIER_NATIONAL]: 'Trésorier National',
+  [RoleCode.DAF_DRS]: 'DAF DRS',
+  [RoleCode.COMPTABLE_DRS]: 'Comptable DRS',
+  [RoleCode.GESTIONNAIRE_DPS]: 'Gestionnaire DPS',
+  [RoleCode.COMPTABLE_DPS]: 'Comptable DPS',
+  [RoleCode.COMPTABLE_HOP]: 'Comptable Hôpital',
+  [RoleCode.GESTIONNAIRE_CS]: 'Gestionnaire Centre de Santé',
 };
 
 export interface User {

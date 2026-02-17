@@ -135,7 +135,7 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
         }
       } catch (e) {
-        console.warn("Erreur fitBounds:", e);
+        // Silently fail on fitBounds - map will still render
       }
     }
   }, [positions, map]);
@@ -171,7 +171,6 @@ export default function GuineaMap() {
         setDrsData(uniqueRegions as DrsData[]);
       }
     } catch (err: any) {
-      console.error("Erreur chargement carte:", err);
       setError("Erreur chargement données");
       // Mode secours
       const fallbackData = Object.keys(regionCoordinates)

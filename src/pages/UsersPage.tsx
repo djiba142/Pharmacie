@@ -13,6 +13,7 @@ import { Search, Plus, Users, Download, Filter, Edit, UserX, UserCheck, KeyRound
 import { RoleCode, ROLE_LABELS } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/authStore';
 
 interface UserRow {
   id: string;
@@ -65,6 +66,7 @@ const UsersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailUser, setDetailUser] = useState<UserRow | null>(null);
   const { toast } = useToast();
+  const { user } = useAuthStore();
 
   // Create form state
   const [form, setForm] = useState({
@@ -106,6 +108,16 @@ const UsersPage = () => {
   const needsEntity = form.role && ENTITY_TYPES_FOR_ROLE[form.role];
 
   const handleCreate = async () => {
+    // ✅ Permission check: Only SUPER_ADMIN and ADMIN_CENTRAL can create users
+    if (!user || ![RoleCode.SUPER_ADMIN, RoleCode.ADMIN_CENTRAL].includes(user.role as RoleCode)) {
+      toast({ 
+        title: 'Accès refusé', 
+        description: 'Seuls les administrateurs peuvent créer des utilisateurs', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     if (!form.email || !form.firstName || !form.lastName || !form.role) {
       toast({ title: 'Erreur', description: 'Veuillez remplir tous les champs obligatoires', variant: 'destructive' });
       return;
@@ -129,7 +141,6 @@ const UsersPage = () => {
       if (!authData.user) throw new Error('Erreur création utilisateur');
 
       const userId = authData.user.id;
-      console.log('User created with ID:', userId);
 
       // Wait for the trigger to create the profile (retry up to 5 times with 500ms delay)
       let profile = null;
@@ -138,10 +149,8 @@ const UsersPage = () => {
         const { data } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
         if (data) {
           profile = data;
-          console.log('Profile found:', profile);
           break;
         }
-        console.log(`Profile not found yet, retry ${i + 1}/5`);
       }
 
       if (!profile) {
@@ -156,7 +165,6 @@ const UsersPage = () => {
       }).eq('user_id', userId);
 
       if (updateError) {
-        console.error('Error updating profile:', updateError);
         throw updateError;
       }
 
@@ -167,7 +175,6 @@ const UsersPage = () => {
       });
 
       if (roleError) {
-        console.error('Error assigning role:', roleError);
         throw roleError;
       }
 
@@ -180,7 +187,6 @@ const UsersPage = () => {
       setForm({ firstName: '', lastName: '', email: '', phone: '', role: '', entityId: '', autoPassword: true, forceChange: true, sendEmail: true });
       fetchUsers();
     } catch (err: any) {
-      console.error('Error creating user:', err);
       toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
     }
   };

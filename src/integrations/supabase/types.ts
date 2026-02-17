@@ -14,6 +14,437 @@ export type Database = {
   }
   public: {
     Tables: {
+      appels_offres: {
+        Row: {
+          criteres_evaluation: Json | null
+          created_at: string | null
+          created_by: string | null
+          date_attribution: string | null
+          date_cloture: string
+          date_publication: string | null
+          description: string | null
+          devise: string | null
+          entite_id: string
+          entite_type: string
+          gagnant_fournisseur_id: string | null
+          id: string
+          montant_attribue: number | null
+          montant_estime: number | null
+          numero_ao: string
+          statut: string | null
+          titre: string
+        }
+        Insert: {
+          criteres_evaluation?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          date_attribution?: string | null
+          date_cloture: string
+          date_publication?: string | null
+          description?: string | null
+          devise?: string | null
+          entite_id: string
+          entite_type: string
+          gagnant_fournisseur_id?: string | null
+          id?: string
+          montant_attribue?: number | null
+          montant_estime?: number | null
+          numero_ao: string
+          statut?: string | null
+          titre: string
+        }
+        Update: {
+          criteres_evaluation?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          date_attribution?: string | null
+          date_cloture?: string
+          date_publication?: string | null
+          description?: string | null
+          devise?: string | null
+          entite_id?: string
+          entite_type?: string
+          gagnant_fournisseur_id?: string | null
+          id?: string
+          montant_attribue?: number | null
+          montant_estime?: number | null
+          numero_ao?: string
+          statut?: string | null
+          titre?: string
+        }
+        Relationships: []
+      }
+      bons_commande: {
+        Row: {
+          approuve_par: string | null
+          budget_id: string | null
+          commande_id: string | null
+          created_at: string | null
+          date_approbation: string | null
+          date_bc: string
+          date_livraison_prevue: string | null
+          demandeur_id: string
+          demandeur_type: string
+          devise: string | null
+          fournisseur_id: string | null
+          fournisseur_nom: string | null
+          fournisseur_type: string | null
+          id: string
+          montant_total: number
+          notes: string | null
+          numero_bc: string
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approuve_par?: string | null
+          budget_id?: string | null
+          commande_id?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          date_bc?: string
+          date_livraison_prevue?: string | null
+          demandeur_id: string
+          demandeur_type: string
+          devise?: string | null
+          fournisseur_id?: string | null
+          fournisseur_nom?: string | null
+          fournisseur_type?: string | null
+          id?: string
+          montant_total: number
+          notes?: string | null
+          numero_bc: string
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approuve_par?: string | null
+          budget_id?: string | null
+          commande_id?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          date_bc?: string
+          date_livraison_prevue?: string | null
+          demandeur_id?: string
+          demandeur_type?: string
+          devise?: string | null
+          fournisseur_id?: string | null
+          fournisseur_nom?: string | null
+          fournisseur_type?: string | null
+          id?: string
+          montant_total?: number
+          notes?: string | null
+          numero_bc?: string
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bons_commande_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bons_commande_commande_id_fkey"
+            columns: ["commande_id"]
+            isOneToOne: false
+            referencedRelation: "commandes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budgets: {
+        Row: {
+          annee: number
+          approuve_par: string | null
+          categorie: string | null
+          created_at: string | null
+          date_approbation: string | null
+          devise: string | null
+          entite_id: string
+          entite_type: string
+          id: string
+          montant_alloue: number
+          montant_engage: number | null
+          montant_liquide: number | null
+          montant_paye: number | null
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          annee: number
+          approuve_par?: string | null
+          categorie?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          devise?: string | null
+          entite_id: string
+          entite_type: string
+          id?: string
+          montant_alloue?: number
+          montant_engage?: number | null
+          montant_liquide?: number | null
+          montant_paye?: number | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          annee?: number
+          approuve_par?: string | null
+          categorie?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          devise?: string | null
+          entite_id?: string
+          entite_type?: string
+          id?: string
+          montant_alloue?: number
+          montant_engage?: number | null
+          montant_liquide?: number | null
+          montant_paye?: number | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ecritures_comptables: {
+        Row: {
+          compte_credit: string
+          compte_debit: string
+          created_at: string | null
+          created_by: string | null
+          devise: string | null
+          entite_id: string | null
+          entite_type: string | null
+          exercice_annee: number
+          id: string
+          journal: string
+          libelle: string
+          montant: number
+          periode_mois: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          compte_credit: string
+          compte_debit: string
+          created_at?: string | null
+          created_by?: string | null
+          devise?: string | null
+          entite_id?: string | null
+          entite_type?: string | null
+          exercice_annee: number
+          id?: string
+          journal: string
+          libelle: string
+          montant: number
+          periode_mois: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          compte_credit?: string
+          compte_debit?: string
+          created_at?: string | null
+          created_by?: string | null
+          devise?: string | null
+          entite_id?: string | null
+          entite_type?: string | null
+          exercice_annee?: number
+          id?: string
+          journal?: string
+          libelle?: string
+          montant?: number
+          periode_mois?: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: []
+      }
+      factures: {
+        Row: {
+          approuve_par: string | null
+          bc_id: string | null
+          commentaire_verification: string | null
+          created_at: string | null
+          date_approbation: string | null
+          date_echeance: string
+          date_facture: string
+          date_reception: string
+          date_verification: string | null
+          devise: string | null
+          fournisseur_contact: string | null
+          fournisseur_nom: string
+          id: string
+          montant_ht: number
+          montant_ttc: number
+          montant_tva: number | null
+          montant_valide: number | null
+          numero_facture: string
+          numero_interne: string
+          statut: string | null
+          updated_at: string | null
+          verifie_par: string | null
+        }
+        Insert: {
+          approuve_par?: string | null
+          bc_id?: string | null
+          commentaire_verification?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          date_echeance: string
+          date_facture: string
+          date_reception?: string
+          date_verification?: string | null
+          devise?: string | null
+          fournisseur_contact?: string | null
+          fournisseur_nom: string
+          id?: string
+          montant_ht: number
+          montant_ttc: number
+          montant_tva?: number | null
+          montant_valide?: number | null
+          numero_facture: string
+          numero_interne: string
+          statut?: string | null
+          updated_at?: string | null
+          verifie_par?: string | null
+        }
+        Update: {
+          approuve_par?: string | null
+          bc_id?: string | null
+          commentaire_verification?: string | null
+          created_at?: string | null
+          date_approbation?: string | null
+          date_echeance?: string
+          date_facture?: string
+          date_reception?: string
+          date_verification?: string | null
+          devise?: string | null
+          fournisseur_contact?: string | null
+          fournisseur_nom?: string
+          id?: string
+          montant_ht?: number
+          montant_ttc?: number
+          montant_tva?: number | null
+          montant_valide?: number | null
+          numero_facture?: string
+          numero_interne?: string
+          statut?: string | null
+          updated_at?: string | null
+          verifie_par?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factures_bc_id_fkey"
+            columns: ["bc_id"]
+            isOneToOne: false
+            referencedRelation: "bons_commande"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paiements: {
+        Row: {
+          approuve_par: string | null
+          budget_id: string | null
+          created_at: string | null
+          date_execution: string | null
+          date_paiement: string
+          devise: string | null
+          execute_par: string | null
+          facture_id: string
+          id: string
+          mode_paiement: string
+          montant: number
+          notes: string | null
+          numero_paiement: string
+          reference_paiement: string | null
+          statut: string | null
+        }
+        Insert: {
+          approuve_par?: string | null
+          budget_id?: string | null
+          created_at?: string | null
+          date_execution?: string | null
+          date_paiement?: string
+          devise?: string | null
+          execute_par?: string | null
+          facture_id: string
+          id?: string
+          mode_paiement: string
+          montant: number
+          notes?: string | null
+          numero_paiement: string
+          reference_paiement?: string | null
+          statut?: string | null
+        }
+        Update: {
+          approuve_par?: string | null
+          budget_id?: string | null
+          created_at?: string | null
+          date_execution?: string | null
+          date_paiement?: string
+          devise?: string | null
+          execute_par?: string | null
+          facture_id?: string
+          id?: string
+          mode_paiement?: string
+          montant?: number
+          notes?: string | null
+          numero_paiement?: string
+          reference_paiement?: string | null
+          statut?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paiements_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paiements_facture_id_fkey"
+            columns: ["facture_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_comptable: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          libelle: string
+          numero_compte: string
+          parent_compte: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          libelle: string
+          numero_compte: string
+          parent_compte?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          libelle?: string
+          numero_compte?: string
+          parent_compte?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       commandes: {
         Row: {
           commentaire: string | null
@@ -891,7 +1322,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_dashboard_insights: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          recommandation_ia: Json
+          derniere_maj: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -902,47 +1341,59 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      predict_stock_rupture: {
+        Args: {
+          p_stock_id: string
+        }
+        Returns: {
+          jours_avant_rupture: number
+          date_rupture_prevue: string
+          quantite_a_commander: number
+          urgence: string
+          confiance: number
+        }[]
+      }
     }
     Enums: {
       app_role:
-        | "SUPER_ADMIN"
-        | "ADMIN_CENTRAL"
-        | "MIN_CABINET"
-        | "MIN_SG"
-        | "MIN_IG"
-        | "DNPM_DIR"
-        | "DNPM_ADJ"
-        | "DNPM_CHEF_SECTION"
-        | "PCG_DIR"
-        | "PCG_ADJ"
-        | "PCG_DIR_ACHATS"
-        | "PCG_DIR_STOCK"
-        | "PCG_DIR_DISTRIB"
-        | "ADMIN_DRS"
-        | "DRS_DIR"
-        | "DRS_ADJ"
-        | "DRS_RESP_PHARMA"
-        | "DRS_LOGISTIQUE"
-        | "DRS_EPIDEMIO"
-        | "ADMIN_DPS"
-        | "DPS_DIR"
-        | "DPS_ADJ"
-        | "DPS_RESP_PHARMA"
-        | "DPS_APPRO"
-        | "DPS_AGENT"
-        | "HOP_DIR"
-        | "HOP_PHARMA"
-        | "CS_RESP"
-        | "CS_AGENT"
-        | "CLIN_DIR"
-        | "CLIN_PHARMA"
-        | "PHARM_REDIST"
-        | "PHARM_RESP"
-        | "LIVREUR_PCG"
-        | "LIVREUR_DRS"
-        | "LIVREUR_DPS"
-        | "LIVREUR_HOP"
-        | "LIVREUR_PHARM_REDIST"
+      | "SUPER_ADMIN"
+      | "ADMIN_CENTRAL"
+      | "MIN_CABINET"
+      | "MIN_SG"
+      | "MIN_IG"
+      | "DNPM_DIR"
+      | "DNPM_ADJ"
+      | "DNPM_CHEF_SECTION"
+      | "PCG_DIR"
+      | "PCG_ADJ"
+      | "PCG_DIR_ACHATS"
+      | "PCG_DIR_STOCK"
+      | "PCG_DIR_DISTRIB"
+      | "ADMIN_DRS"
+      | "DRS_DIR"
+      | "DRS_ADJ"
+      | "DRS_RESP_PHARMA"
+      | "DRS_LOGISTIQUE"
+      | "DRS_EPIDEMIO"
+      | "ADMIN_DPS"
+      | "DPS_DIR"
+      | "DPS_ADJ"
+      | "DPS_RESP_PHARMA"
+      | "DPS_APPRO"
+      | "DPS_AGENT"
+      | "HOP_DIR"
+      | "HOP_PHARMA"
+      | "CS_RESP"
+      | "CS_AGENT"
+      | "CLIN_DIR"
+      | "CLIN_PHARMA"
+      | "PHARM_REDIST"
+      | "PHARM_RESP"
+      | "LIVREUR_PCG"
+      | "LIVREUR_DRS"
+      | "LIVREUR_DPS"
+      | "LIVREUR_HOP"
+      | "LIVREUR_PHARM_REDIST"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -956,116 +1407,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
+  ? R
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+    DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
+    Insert: infer I
+  }
+  ? I
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
+    Update: infer U
+  }
+  ? U
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Enums"]
+  | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["CompositeTypes"]
+  | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   public: {

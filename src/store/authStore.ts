@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { logAction } from '@/services/logService';
+import { cookieService } from '@/services/cookieService';
 
 export interface UserProfile {
   id: string;

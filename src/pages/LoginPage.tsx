@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
 import logoLivramed from '@/assets/logo-livramed.png';
 import logoMshp from '@/assets/partners/mshp.png';
@@ -27,8 +29,11 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  const { toast } = useToast();
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -51,6 +56,31 @@ const LoginPage = () => {
       }
     } catch {
       setError('Erreur de connexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      setResetEmailSent(true);
+      toast({
+        title: 'Email envoyé',
+        description: 'Vérifiez votre boîte mail pour réinitialiser votre mot de passe',
+      });
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'envoi de l\'email');
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -105,38 +135,123 @@ const LoginPage = () => {
           </div>
 
           <div className="text-center lg:text-left">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="mb-4 -ml-2"
+            >
+              ← Retour à l'accueil
+            </Button>
             <h2 className="text-2xl font-display font-bold text-foreground">Connexion</h2>
             <p className="mt-1 text-sm text-muted-foreground">Accédez à votre espace de gestion</p>
           </div>
 
           <Card className="border-border/50 shadow-sm">
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Adresse email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="email" type="email" placeholder="votre.email@sante.gov.gn" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
+              {!forgotPasswordMode ? (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Adresse email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id="email" type="email" placeholder="votre.email@sante.gov.gn" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" required />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Mot de passe</Label>
+                      <button
+                        type="button"
+                        onClick={() => setForgotPasswordMode(true)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Mot de passe oublié ?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10" required />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
+
+                  {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Chargement...' : 'Se connecter'}
+                  </Button>
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  {!resetEmailSent ? (
+                    <>
+                      <div className="text-center mb-4">
+                        <h3 className="font-semibold text-foreground">Réinitialiser le mot de passe</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Entrez votre email pour recevoir un lien de réinitialisation
+                        </p>
+                      </div>
+                      <form onSubmit={handleForgotPassword} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="reset-email">Adresse email</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="votre.email@sante.gov.gn"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              className="pl-10"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
+
+                        <Button type="submit" className="w-full" disabled={loading}>
+                          {loading ? 'Envoi...' : 'Envoyer le lien'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => { setForgotPasswordMode(false); setError(''); }}
+                        >
+                          ← Retour à la connexion
+                        </Button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+                        <Mail className="h-6 w-6 text-success" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">Email envoyé !</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Vérifiez votre boîte mail <strong>{email}</strong> et cliquez sur le lien pour réinitialiser votre mot de passe.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Le lien est valide pendant 1 heure.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => { setForgotPasswordMode(false); setResetEmailSent(false); setError(''); }}
+                      >
+                        ← Retour à la connexion
+                      </Button>
+                    </div>
+                  )}
                 </div>
-
-                {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</p>}
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Chargement...' : 'Se connecter'}
-                </Button>
-              </form>
+              )}
             </CardContent>
           </Card>
 

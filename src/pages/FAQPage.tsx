@@ -23,27 +23,27 @@ const faqData: FAQItem[] = [
         question: 'Comment obtenir un compte sur LivraMed ?',
         answer: `Les comptes sont créés uniquement par les administrateurs autorisés. Vous ne pouvez pas créer un compte vous-même.
 
-**Procédure :**
+Procédure :
 1. Contactez l'administrateur de votre entité (DPS, DRS, Hôpital)
 2. Il créera votre compte avec vos informations
 3. Vous recevrez un email avec vos identifiants
 4. Suivez le lien d'activation dans l'email
 
-**Contact si problème :** support@livramed.sante.gov.gn`
+Contact si problème : support@livramed.sante.gov.gn`
     },
     {
         category: 'Compte et Connexion',
         question: 'J\'ai oublié mon mot de passe, que faire ?',
         answer: `Utilisez la fonction "Mot de passe oublié" sur la page de connexion.
 
-**Étapes :**
+Étapes :
 1. Cliquez sur "Mot de passe oublié ?"
 2. Entrez votre email professionnel
 3. Consultez votre boîte mail
 4. Cliquez sur le lien de réinitialisation (valide 1 heure)
 5. Créez un nouveau mot de passe (12+ caractères)
 
-**Si vous ne recevez pas l'email :**
+Si vous ne recevez pas l'email :
 - Vérifiez vos spams
 - Vérifiez que l'email est correct
 - Attendez 5 minutes puis réessayez`
@@ -53,7 +53,7 @@ const faqData: FAQItem[] = [
         question: 'Mon compte est bloqué après plusieurs tentatives, que faire ?',
         answer: `Pour des raisons de sécurité, après 5 tentatives de connexion échouées, votre compte est automatiquement bloqué pendant 15 minutes.
 
-**Solutions :**
+Solutions :
 - ⏱️ Attendez 15 minutes puis réessayez
 - 🔑 Utilisez "Mot de passe oublié" pour réinitialiser
 - 📞 Contactez votre administrateur si urgent`
@@ -66,7 +66,7 @@ const faqData: FAQItem[] = [
 2. Vous voyez la liste de tous vos médicaments
 3. Utilisez les filtres pour affiner
 
-**Indicateurs de couleur :**
+Indicateurs de couleur :
 - 🟢 Vert : Stock OK
 - 🟡 Orange : Alerte
 - 🔴 Rouge : Critique
@@ -75,7 +75,7 @@ const faqData: FAQItem[] = [
     {
         category: 'Gestion des Stocks',
         question: 'Comment faire un ajustement de stock ?',
-        answer: `**Procédure :**
+        answer: `Procédure :
 1. Stocks → Sélectionnez le médicament
 2. Bouton "Ajuster le stock"
 3. Entrez la nouvelle quantité exacte
@@ -83,13 +83,13 @@ const faqData: FAQItem[] = [
 5. Ajoutez un commentaire explicatif
 6. Validez
 
-**Important :** Les ajustements > 10% nécessitent parfois une validation hiérarchique.`
+Important : Les ajustements > 10% nécessitent parfois une validation hiérarchique.`
     },
     // COMMANDES
     {
         category: 'Commandes',
         question: 'Comment créer une commande ?',
-        answer: `**Étapes :**
+        answer: `Étapes :
 1. Menu → Commandes → Nouvelle commande
 2. Le fournisseur est automatiquement sélectionné
 3. Cliquez sur "Ajouter un médicament"
@@ -104,12 +104,12 @@ Vous recevrez une notification à chaque changement de statut.`
     {
         category: 'Commandes',
         question: 'Combien de temps pour qu\'une commande soit validée ?',
-        answer: `**Délais moyens :**
+        answer: `Délais moyens :
 - DPS valide commande CS/Hôpital : 24-48h
 - DRS valide commande DPS : 48-72h
 - PCG valide commande DRS : 3-5 jours
 
-**Facteurs influençant :**
+Facteurs influençant :
 - Disponibilité du stock
 - Priorité (urgente traitée plus vite)
 - Complexité de la commande`
@@ -122,7 +122,7 @@ Vous recevrez une notification à chaque changement de statut.`
 2. Filtrez par "En cours"
 3. Cliquez sur votre livraison
 
-**Ce que vous verrez :**
+Ce que vous verrez :
 - 🗺️ Carte interactive avec position du livreur
 - 🔵 Position actuelle (mise à jour toutes les 2 min)
 - ⏱️ Heure d'arrivée estimée
@@ -131,7 +131,7 @@ Vous recevrez une notification à chaque changement de statut.`
     {
         category: 'Livraisons',
         question: 'Comment réceptionner une livraison ?',
-        answer: `**Procédure :**
+        answer: `Procédure :
 1. Vérifiez l'identité du livreur
 2. Contrôlez l'état du colis
 3. Vérifiez le contenu (médicaments, quantités, dates)
@@ -139,13 +139,13 @@ Vous recevrez une notification à chaque changement de statut.`
 5. Le livreur prend une photo
 6. Votre stock est automatiquement mis à jour
 
-**Important :** Ne signez QUE si tout est conforme.`
+Important : Ne signez QUE si tout est conforme.`
     },
     // PHARMACOVIGILANCE
     {
         category: 'Pharmacovigilance',
         question: 'Comment déclarer un effet indésirable ?',
-        answer: `**Procédure :**
+        answer: `Procédure :
 1. Menu → Pharmacovigilance → Nouvelle déclaration
 2. Recherchez le médicament suspecté
 3. Indiquez le numéro de lot
@@ -161,19 +161,19 @@ Vous recevrez un numéro de déclaration.`
     {
         category: 'Rapports et Exports',
         question: 'Comment générer un rapport de stock ?',
-        answer: `**Procédure :**
+        answer: `Procédure :
 1. Menu → Rapports → Rapport de stock
 2. Configurez la période et le type
 3. Cliquez sur "Générer le rapport"
 4. Téléchargez en PDF ou Excel
 
-**Contenu :** Liste des médicaments, quantités, alertes, mouvements, taux de rotation.`
+Contenu : Liste des médicaments, quantités, alertes, mouvements, taux de rotation.`
     },
     // PROBLÈMES TECHNIQUES
     {
         category: 'Problèmes Techniques',
         question: 'Le site est lent, que faire ?',
-        answer: `**Solutions :**
+        answer: `Solutions :
 1. Vérifiez votre connexion internet (min 2 Mbps)
 2. Actualisez la page (F5)
 3. Videz le cache (Ctrl+Shift+Suppr)
@@ -187,7 +187,7 @@ Si le problème persiste, contactez le support.`
     {
         category: 'Sécurité',
         question: 'Comment protéger mon compte ?',
-        answer: `**10 règles d'or :**
+        answer: `10 règles d'or :
 1. Mot de passe robuste (12+ caractères)
 2. Activez la 2FA
 3. Ne partagez JAMAIS vos identifiants
