@@ -170,7 +170,7 @@ export default function GuineaMap() {
         const uniqueRegions = fallbackData.filter((v, i, a) => a.findIndex(t => (t.region === v.region)) === i);
         setDrsData(uniqueRegions as DrsData[]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("Erreur chargement données");
       // Mode secours
       const fallbackData = Object.keys(regionCoordinates)

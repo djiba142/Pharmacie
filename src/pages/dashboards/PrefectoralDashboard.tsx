@@ -73,7 +73,7 @@ export default function PrefectoralDashboard() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <KPICard
                     title="Structures"
                     value={stats?.structuresCount || 0}
@@ -81,16 +81,22 @@ export default function PrefectoralDashboard() {
                     variant="default"
                 />
                 <KPICard
-                    title="Médicaments en Stock"
+                    title="Médicaments"
                     value={stats?.totalStocks || 0}
                     icon={Package}
                     variant="info"
                 />
                 <KPICard
-                    title="Alertes Stock"
+                    title="Alertes"
                     value={stats?.alertes || 0}
                     icon={AlertTriangle}
                     variant={(stats?.alertes || 0) > 10 ? 'danger' : (stats?.alertes || 0) > 0 ? 'warning' : 'success'}
+                />
+                <KPICard
+                    title="Utilisateurs"
+                    value={stats?.activeUsers || 0}
+                    icon={Users}
+                    variant="default"
                 />
                 <KPICard
                     title="Commandes"
@@ -100,7 +106,7 @@ export default function PrefectoralDashboard() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Graphique Stocks par Structure */}
                 <StatsChart
                     data={chartData}
@@ -108,9 +114,20 @@ export default function PrefectoralDashboard() {
                     type="bar"
                     dataKey="stocks"
                     xAxisKey="name"
-                    color="#0d9488"
+                    color="#0ea5e9"
                     icon={Package}
                     height={280}
+                />
+
+                {/* Distribution Performance */}
+                <StatsChart
+                    data={(data?.structurePerformance || []).slice(0, 5).map(s => ({ name: s.structureName, value: s.performance }))}
+                    title="Répartition Performance"
+                    type="pie"
+                    dataKey="value"
+                    xAxisKey="name"
+                    height={280}
+                    showLegend
                 />
 
                 {/* Alertes */}

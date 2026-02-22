@@ -24,8 +24,8 @@ interface LogActionParams {
     action: AuditAction;
     entityType: AuditEntityType;
     entityId?: string;
-    details?: Record<string, any>;
-    metadata?: Record<string, any>; // For backward compatibility or extra data
+    details?: Record<string, unknown>;
+    metadata?: Record<string, unknown>; // For backward compatibility or extra data
 }
 
 interface UserProfileCache {
@@ -134,8 +134,8 @@ export const logAction = async ({
         };
 
         const { error } = await supabase
-            .from('audit_logs' as any) // Cast to any until types are regenerated after migration
-            .insert(logEntry);
+            .from('audit_logs' as unknown as any) // Cast to unknown then any until types are regenerated after migration
+            .insert(logEntry as unknown as any);
 
         if (error) {
             console.error('Failed to insert audit log:', error);

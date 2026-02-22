@@ -26,7 +26,7 @@ export function AIInsightsCard() {
             try {
                 setError(null);
                 const response = await aiService.getInsights(userEntity);
-                
+
                 if (response.success && response.data) {
                     setInsights(response.data);
                 } else {
@@ -78,7 +78,7 @@ export function AIInsightsCard() {
                     navigate('/livraisons');
                     break;
                 default:
-                    // Unknown action: silently ignore unknown insight actions
+                // Unknown action: silently ignore unknown insight actions
             }
         } catch (err) {
             // Silently fail on action tracking
@@ -158,28 +158,6 @@ export function AIInsightsCard() {
                 {primaryInsight.action && (
                     <Button
                         onClick={() => handleAction(primaryInsight)}
-                        size="sm"
-                        variant="default"
-                        className="w-full group"
-                    >
-                        Voir détails
-                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
-                    </span>
-                    <div className="flex-1">
-                        <p className="font-semibold text-sm">{insight.titre}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{insight.message}</p>
-                    </div>
-                </div>
-
-                {insight.action && (
-                    <Button
-                        onClick={handleAction}
                         size="sm"
                         variant="default"
                         className="w-full group"

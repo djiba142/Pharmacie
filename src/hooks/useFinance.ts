@@ -25,7 +25,7 @@ export const useFinance = () => {
 
     const useCreateBudget = () => {
         return useMutation({
-            mutationFn: async (budget: any) => {
+            mutationFn: async (budget: Omit<Budget, "id" | "created_at" | "updated_at">) => {
                 const { data, error } = await supabase.from("budgets").insert(budget).select().single();
                 if (error) throw error;
                 return data;
@@ -46,12 +46,49 @@ export const useFinance = () => {
         return useQuery({
             queryKey: ["bons_commande", entiteId],
             queryFn: async () => {
-                let query = supabase.from("bons_commande").select("*, orders:commande_id(*)");
+                let query = supabase.from("bons_commande").select("*");
                 if (entiteId) query = query.eq("demandeur_id", entiteId);
 
                 const { data, error } = await query;
                 if (error) throw error;
-                return data as (BonCommandeFinance & { orders: any })[];
+                return data as BonCommandeFinance[];
+            },
+        });
+    };
+
+    const useCreateBonCommande = () => {
+        return useMutation({
+            mutationFn: async (bc: Omit<BonCommandeFinance, "id" | "created_at" | "updated_at">) => {
+                const { data, error } = await supabase.from("bons_commande").insert(bc).select().single();
+                if (error) throw error;
+                return data;
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["bons_commande"] });
+                toast.success("Bon de commande créé");
+            },
+        });
+    };
+
+    const useValidateBC = () => {
+        return useMutation({
+            mutationFn: async ({ id, approvedBy }: { id: string; approvedBy: string }) => {
+                const { data, error } = await supabase
+                    .from("bons_commande")
+                    .update({
+                        statut: 'APPROUVE',
+                        approuve_par: approvedBy,
+                        date_approbation: new Date().toISOString()
+                    })
+                    .eq("id", id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                return data;
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["bons_commande"] });
+                toast.success("BC validé avec succès");
             },
         });
     };
@@ -86,6 +123,94 @@ export const useFinance = () => {
         });
     };
 
+    const useUpdatePaiementStatut = () => {
+        return useMutation({
+            mutationFn: async ({ id, statut, executeBy }: { id: string; statut: string; executeBy?: string }) => {
+                const updateData: Partial<Record<string, unknown>> = { statut };
+                if (executeBy) {
+                    updateData.execute_par = executeBy;
+                    updateData.date_execution = new Date().toISOString();
+                }
+                const { data, error } = await supabase
+                    .from("paiements")
+                    .update(updateData)
+                    .eq("id", id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                return data;
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["paiements"] });
+                toast.success("Statut du paiement mis à jour");
+            },
+        });
+    };
+
+    const useCreatePaiement = () => {
+        return useMutation({
+            mutationFn: async (paiement: Omit<Paiement, "id" | "created_at">) => {
+                const { data, error } = await supabase.from("paiements").insert(paiement).select().single();
+                if (error) throw error;
+                return data;
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["paiements"] });
+                toast.success("Virement/Paiement initié avec succès");
+            },
+        });
+    };
+
+    // --- Dashboard Aggregate Stats ---
+    const useFinanceStats = () => {
+        return useQuery({
+            queryKey: ["finance_stats"],
+            queryFn: async () => {
+                const { data: budgets } = await supabase.from("budgets").select("montant_alloue, montant_engage");
+                const { data: paiements } = await supabase.from("paiements").select("montant, statut");
+                const { data: recursiveBC } = await supabase.from("bons_commande").select("id").eq("statut", "CREE");
+
+                const totalBudget = budgets?.reduce((acc, b) => acc + (b.montant_alloue || 0), 0) || 0;
+                const totalEngage = budgets?.reduce((acc, b) => acc + (b.montant_engage || 0), 0) || 0;
+                const pendingValidations = recursiveBC?.length || 0;
+
+                const totalAvailable = paiements?.filter(p => p.statut === 'EXECUTE').reduce((acc, p) => acc + (p.montant || 0), 0) || 0;
+                const totalDue = paiements?.filter(p => p.statut === 'EN_ATTENTE').reduce((acc, p) => acc + (p.montant || 0), 0) || 0;
+
+                return {
+                    totalBudget,
+                    totalEngage,
+                    pendingValidations,
+                    totalAvailable,
+                    totalDue
+                };
+            }
+        });
+    };
+
+    const useUpdateFactureStatut = () => {
+        return useMutation({
+            mutationFn: async ({ id, statut, approvedBy }: { id: string; statut: string; approvedBy: string }) => {
+                const { data, error } = await supabase
+                    .from("factures")
+                    .update({
+                        statut,
+                        approuve_par: approvedBy,
+                        date_approbation: new Date().toISOString()
+                    })
+                    .eq("id", id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                return data;
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["factures"] });
+                toast.success("Statut de la facture mis à jour");
+            },
+        });
+    };
+
     // --- Ecritures Comptables ---
     const useEcritures = (exercice?: number, mois?: number) => {
         return useQuery({
@@ -102,12 +227,46 @@ export const useFinance = () => {
         });
     };
 
+    // --- Appels d'Offres ---
+    const useAppelsOffres = (statut?: string) => {
+        return useQuery({
+            queryKey: ["appels_offres", statut],
+            queryFn: async () => {
+                let query = supabase.from("appels_offres").select("*");
+                if (statut) query = query.eq("statut", statut);
+                const { data, error } = await query;
+                if (error) throw error;
+                return data;
+            },
+        });
+    };
+
+    // --- Plan Comptable ---
+    const usePlanComptable = () => {
+        return useQuery({
+            queryKey: ["plan_comptable"],
+            queryFn: async () => {
+                const { data, error } = await supabase.from("plan_comptable").select("*").order('code');
+                if (error) throw error;
+                return data;
+            },
+        });
+    };
+
     return {
         useBudgets,
         useCreateBudget,
         useBonsCommande,
+        useCreateBonCommande,
+        useValidateBC,
         useFactures,
         usePaiements,
-        useEcritures
+        useCreatePaiement,
+        useUpdatePaiementStatut,
+        useUpdateFactureStatut,
+        useEcritures,
+        useAppelsOffres,
+        usePlanComptable,
+        useFinanceStats
     };
 };

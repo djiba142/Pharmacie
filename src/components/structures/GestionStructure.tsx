@@ -46,6 +46,14 @@ export default function GestionStructure({ typeStructure, titre, description, ic
   const [showEntry, setShowEntry] = useState(false);
   const [entry, setEntry] = useState<StockEntry>(emptyEntry);
 
+  interface Structure {
+    id: string;
+    nom: string;
+    type: string;
+    is_active: boolean;
+    commune?: string;
+  }
+
   // Fetch structures of this type
   const { data: structures = [], isLoading: loadingStructures } = useQuery({
     queryKey: ['structures', typeStructure],
@@ -57,7 +65,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
         .eq('is_active', true)
         .order('nom');
       if (error) throw error;
-      return data;
+      return data as Structure[];
     },
   });
 
@@ -66,10 +74,30 @@ export default function GestionStructure({ typeStructure, titre, description, ic
   useEffect(() => {
     if (structures.length > 0 && !selectedStructureId) {
       // Auto-select user's entity or first structure
-      const userStructure = entityId ? structures.find((s: any) => s.id === entityId) : null;
+      const userStructure = entityId ? (structures as Structure[]).find((s) => s.id === entityId) : null;
       setSelectedStructureId(userStructure?.id || structures[0]?.id || null);
     }
   }, [structures, entityId, selectedStructureId]);
+
+  interface StockItem {
+    id: string;
+    entite_id: string;
+    lot_id: string;
+    quantite_actuelle: number;
+    seuil_alerte: number;
+    seuil_minimal: number;
+    derniere_maj?: string;
+    lots?: {
+      id: string;
+      numero_lot: string;
+      date_peremption: string;
+      medicaments?: {
+        id: string;
+        dci: string;
+        nom_commercial?: string;
+      };
+    };
+  }
 
   // Fetch stocks for selected structure
   const { data: stocks = [], isLoading: loadingStocks } = useQuery({
@@ -82,7 +110,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
         .eq('entite_id', selectedStructureId)
         .order('quantite_actuelle', { ascending: true });
       if (error) throw error;
-      return data;
+      return data as StockItem[];
     },
     enabled: !!selectedStructureId,
   });
@@ -96,6 +124,13 @@ export default function GestionStructure({ typeStructure, titre, description, ic
     },
   });
 
+  interface Lot {
+    id: string;
+    numero_lot: string;
+    date_peremption: string;
+    quantite_initiale: number;
+  }
+
   // Fetch lots for selected medicament
   const { data: lots = [] } = useQuery({
     queryKey: ['lots-for-med', entry.medicament_id],
@@ -107,10 +142,25 @@ export default function GestionStructure({ typeStructure, titre, description, ic
         .eq('medicament_id', entry.medicament_id)
         .eq('statut', 'DISPONIBLE')
         .order('date_peremption');
-      return data || [];
+      return (data || []) as Lot[];
     },
     enabled: !!entry.medicament_id,
   });
+
+  interface Mouvement {
+    id: string;
+    created_at: string;
+    type: string;
+    quantite: number;
+    commentaire?: string;
+    stocks?: {
+      lots?: {
+        medicaments?: {
+          dci: string;
+        };
+      };
+    };
+  }
 
   // Recent movements
   const { data: mouvements = [] } = useQuery({
@@ -123,7 +173,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
         .eq('stocks.entite_id', selectedStructureId)
         .order('created_at', { ascending: false })
         .limit(20);
-      return data || [];
+      return (data || []) as Mouvement[];
     },
     enabled: !!selectedStructureId,
   });
@@ -158,12 +208,12 @@ export default function GestionStructure({ typeStructure, titre, description, ic
       if (existing) {
         stockId = existing.id;
         const newQty = e.type === 'ENTREE'
-          ? existing.quantite_actuelle + e.quantite
+          ? (existing as unknown as { quantite_actuelle: number }).quantite_actuelle + e.quantite
           : e.type === 'SORTIE'
-            ? Math.max(0, existing.quantite_actuelle - e.quantite)
+            ? Math.max(0, (existing as unknown as { quantite_actuelle: number }).quantite_actuelle - e.quantite)
             : e.quantite;
-        
-        const updates: any = {
+
+        const updates: Record<string, unknown> = {
           quantite_actuelle: newQty,
           derniere_maj: new Date().toISOString(),
         };
@@ -205,29 +255,30 @@ export default function GestionStructure({ typeStructure, titre, description, ic
       setEntry(emptyEntry);
       toast({ title: 'Mouvement enregistré', description: 'Le stock a été mis à jour en temps réel.' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   // Stats
   const totalItems = stocks.length;
-  const alertCount = stocks.filter((s: any) => s.quantite_actuelle <= s.seuil_alerte && s.quantite_actuelle > s.seuil_minimal).length;
-  const criticalCount = stocks.filter((s: any) => s.quantite_actuelle <= s.seuil_minimal).length;
-  const expiredCount = stocks.filter((s: any) => new Date(s.lots?.date_peremption) < new Date()).length;
+  const alertCount = (stocks as StockItem[]).filter((s) => s.quantite_actuelle <= s.seuil_alerte && s.quantite_actuelle > s.seuil_minimal).length;
+  const criticalCount = (stocks as StockItem[]).filter((s) => s.quantite_actuelle <= s.seuil_minimal).length;
+  const expiredCount = (stocks as StockItem[]).filter((s) => s.lots?.date_peremption && new Date(s.lots.date_peremption) < new Date()).length;
 
-  const filteredStocks = stocks.filter((s: any) => {
+  const filteredStocks = (stocks as StockItem[]).filter((s) => {
     const dci = s.lots?.medicaments?.dci || '';
     return dci.toLowerCase().includes(search.toLowerCase());
   });
 
-  const getStockStatus = (s: any) => {
-    const exp = new Date(s.lots?.date_peremption);
+  const getStockStatus = (s: StockItem) => {
+    if (!s.lots?.date_peremption) return { label: 'Normal', className: 'bg-success/10 text-success border-success/20' };
+    const exp = new Date(s.lots.date_peremption);
     if (exp < new Date()) return { label: 'Périmé', className: 'bg-destructive/10 text-destructive border-destructive/20' };
     if (s.quantite_actuelle <= s.seuil_minimal) return { label: 'Critique', className: 'bg-destructive/10 text-destructive border-destructive/20' };
     if (s.quantite_actuelle <= s.seuil_alerte) return { label: 'Alerte', className: 'bg-warning/10 text-warning border-warning/20' };
     return { label: 'Normal', className: 'bg-success/10 text-success border-success/20' };
   };
 
-  const selectedStructure = structures.find((s: any) => s.id === selectedStructureId);
+  const selectedStructure = (structures as Structure[]).find((s) => s.id === selectedStructureId);
 
   if (loadingStructures) return <div className="space-y-4 animate-fade-in"><Skeleton className="h-8 w-64" /><Skeleton className="h-64 rounded-xl" /></div>;
 
@@ -253,7 +304,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
             <SelectValue placeholder="Sélectionner une structure" />
           </SelectTrigger>
           <SelectContent>
-            {structures.map((s: any) => (
+            {(structures as Structure[]).map((s) => (
               <SelectItem key={s.id} value={s.id}>{s.nom} — {s.commune || s.type}</SelectItem>
             ))}
           </SelectContent>
@@ -320,7 +371,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
                   <TableRow><TableCell colSpan={7}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ) : filteredStocks.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Aucun stock enregistré</TableCell></TableRow>
-                ) : filteredStocks.map((s: any) => {
+                ) : filteredStocks.map((s) => {
                   const status = getStockStatus(s);
                   return (
                     <TableRow key={s.id}>
@@ -328,7 +379,9 @@ export default function GestionStructure({ typeStructure, titre, description, ic
                       <TableCell className="font-mono text-xs">{s.lots?.numero_lot}</TableCell>
                       <TableCell className="font-display font-bold">{s.quantite_actuelle}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{s.seuil_alerte}</TableCell>
-                      <TableCell className="text-xs">{new Date(s.lots?.date_peremption).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell className="text-xs">
+                        {s.lots?.date_peremption ? new Date(s.lots.date_peremption).toLocaleDateString('fr-FR') : '—'}
+                      </TableCell>
                       <TableCell><Badge variant="outline" className={status.className}>{status.label}</Badge></TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {s.derniere_maj ? new Date(s.derniere_maj).toLocaleDateString('fr-FR') : '—'}
@@ -354,14 +407,14 @@ export default function GestionStructure({ typeStructure, titre, description, ic
                     <TableHead>Commentaire</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {mouvements.map((m: any) => (
+                    {mouvements.map((m) => (
                       <TableRow key={m.id}>
                         <TableCell className="text-xs">{new Date(m.created_at).toLocaleString('fr-FR')}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={
                             m.type === 'ENTREE' ? 'bg-success/10 text-success border-success/20' :
-                            m.type === 'SORTIE' ? 'bg-warning/10 text-warning border-warning/20' :
-                            'bg-info/10 text-info border-info/20'
+                              m.type === 'SORTIE' ? 'bg-warning/10 text-warning border-warning/20' :
+                                'bg-info/10 text-info border-info/20'
                           }>
                             {m.type === 'ENTREE' && <TrendingUp className="h-3 w-3 mr-1" />}
                             {m.type === 'SORTIE' && <TrendingDown className="h-3 w-3 mr-1" />}
@@ -388,7 +441,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Type de mouvement</Label>
-              <Select value={entry.type} onValueChange={(v: any) => setEntry({ ...entry, type: v })}>
+              <Select value={entry.type} onValueChange={(v: 'ENTREE' | 'SORTIE' | 'AJUSTEMENT') => setEntry({ ...entry, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ENTREE">Entrée</SelectItem>
@@ -402,7 +455,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
               <Select value={entry.medicament_id} onValueChange={(v) => setEntry({ ...entry, medicament_id: v, lot_id: '' })}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner un médicament" /></SelectTrigger>
                 <SelectContent>
-                  {medicaments.map((m: any) => (
+                  {medicaments.map((m: { id: string, dci: string, nom_commercial?: string }) => (
                     <SelectItem key={m.id} value={m.id}>{m.dci} {m.nom_commercial ? `(${m.nom_commercial})` : ''}</SelectItem>
                   ))}
                 </SelectContent>
@@ -414,7 +467,7 @@ export default function GestionStructure({ typeStructure, titre, description, ic
                 <Select value={entry.lot_id} onValueChange={(v) => setEntry({ ...entry, lot_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner un lot" /></SelectTrigger>
                   <SelectContent>
-                    {lots.map((l: any) => (
+                    {(lots as Lot[]).map((l) => (
                       <SelectItem key={l.id} value={l.id}>
                         {l.numero_lot} — Exp: {new Date(l.date_peremption).toLocaleDateString('fr-FR')}
                       </SelectItem>

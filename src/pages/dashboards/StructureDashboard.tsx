@@ -1,6 +1,7 @@
 import KPICard from '@/components/dashboard/KPICard';
 import AlertList, { Alert } from '@/components/dashboard/AlertList';
 import QuickActions, { QuickAction } from '@/components/dashboard/QuickActions';
+import StatsChart from '@/components/dashboard/StatsChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStructureData } from '@/hooks/useStructureData';
@@ -134,8 +135,24 @@ export default function StructureDashboard() {
                     <QuickActions actions={quickActions} title="Actions Rapides" columns={2} />
                 </div>
 
+                {/* Graphique Stock Local */}
+                <div className="lg:col-span-1">
+                    <StatsChart
+                        data={[
+                            { name: 'Sain', value: (stats?.totalStocks || 0) - (stats?.stocksEnAlerte || 0) },
+                            { name: 'Alerte', value: stats?.stocksEnAlerte || 0 }
+                        ]}
+                        title="État du Stock"
+                        type="pie"
+                        dataKey="value"
+                        xAxisKey="name"
+                        height={200}
+                        showLegend
+                    />
+                </div>
+
                 {/* Alertes et Notifications */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-1">
                     <AlertList
                         alerts={alerts}
                         maxItems={5}

@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Truck, AlertTriangle,
   BarChart3, Users, Settings, LogOut, Pill, ClipboardCheck, User, Info,
   Building2, Hospital, HeartPulse, Shield, Wallet, Coins, Receipt,
+  LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ROLE_LABELS, RoleCode } from '@/types/auth';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 
 type NavItem = {
-  title: string; url: string; icon: any;
+  title: string; url: string; icon: LucideIcon;
   levels?: UserLevel[];
 };
 

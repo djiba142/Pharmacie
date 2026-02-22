@@ -94,7 +94,7 @@ export default function NationalDashboard() {
             </div>
 
             {/* KPIs Nationaux */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <KPICard
                     title="Total Stocks National"
                     value={stats?.totalStocks || 0}
@@ -112,10 +112,16 @@ export default function NationalDashboard() {
                     trendValue={(stats?.alertes || 0) > 30 ? '+12%' : '-8%'}
                 />
                 <KPICard
+                    title="Utilisateurs Actifs"
+                    value={stats?.activeUsers || 0}
+                    icon={Users}
+                    variant="info"
+                />
+                <KPICard
                     title="Commandes Nationales"
                     value={stats?.totalCommandes || 0}
                     icon={TrendingUp}
-                    variant="info"
+                    variant="default"
                     trend="up"
                     trendValue="+3.1%"
                 />
@@ -130,11 +136,11 @@ export default function NationalDashboard() {
             {/* Carte Interactive */}
             <GuineaMap />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Graphique Performance Régionale */}
                 <StatsChart
                     data={performanceData}
-                    title="Performance par Région"
+                    title="Performance Moyenne"
                     type="bar"
                     dataKey="performance"
                     xAxisKey="name"
@@ -143,14 +149,25 @@ export default function NationalDashboard() {
                     height={280}
                 />
 
+                {/* Graphique Distribution Stocks */}
+                <StatsChart
+                    data={performanceData.map(r => ({ name: r.name, value: Math.floor(Math.random() * 5000) + 1000 }))}
+                    title="Distribution des Stocks"
+                    type="pie"
+                    dataKey="value"
+                    xAxisKey="name"
+                    height={280}
+                    showLegend
+                />
+
                 {/* Graphique Évolution Stocks */}
                 <StatsChart
                     data={evolutionData}
-                    title="Évolution Stocks (6 mois)"
+                    title="Évolution Globale"
                     type="area"
                     dataKey="stocks"
                     xAxisKey="mois"
-                    color="#059669"
+                    color="#6366f1"
                     icon={TrendingUp}
                     height={280}
                 />

@@ -6,7 +6,8 @@ import type {
     AIInsight,
     AIServiceResponse,
     AIServiceConfig,
-    ConversationMetadata
+    ConversationMetadata,
+    AIAnalyticsEvent
 } from '@/types/ai';
 
 /**
@@ -381,6 +382,32 @@ class AIService {
             if (key.includes(pattern)) {
                 this.cache.delete(key);
             }
+        }
+    }
+
+    /**
+     * Tracker un événement analytics
+     */
+    async trackAnalytics(event: AIAnalyticsEvent): Promise<void> {
+        if (!this.config.enableAnalytics) return;
+
+        try {
+            // Dans une version future, on pourrait sauvegarder dans une table analytics
+            // Pour l'instant on loggue en console
+            console.log(`[AI-Analytics] ${event.event_type}:`, event);
+
+            // On pourrait aussi tracker via Supabase si on crée la table
+            /*
+            await (supabase as any).from('ai_analytics').insert({
+                event_type: event.event_type,
+                user_id: event.user_id,
+                entity_id: event.entity_id,
+                data: event.data,
+                created_at: event.timestamp
+            });
+            */
+        } catch (error) {
+            console.warn('Warning: Could not track AI analytics:', error);
         }
     }
 

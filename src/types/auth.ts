@@ -51,6 +51,12 @@ export enum RoleCode {
   GESTIONNAIRE_CS = 'GESTIONNAIRE_CS',
 }
 
+export enum UserStatus {
+  ACTIF = 'ACTIF',
+  SUSPENDU = 'SUSPENDU',
+  SUPPRIME = 'SUPPRIME',
+}
+
 export const ROLE_LABELS: Record<RoleCode, string> = {
   [RoleCode.SUPER_ADMIN]: 'Super Administrateur',
   [RoleCode.ADMIN_CENTRAL]: 'Administrateur Central',
@@ -90,7 +96,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   [RoleCode.LIVREUR_DPS]: 'Livreur DPS',
   [RoleCode.LIVREUR_HOP]: 'Livreur Hôpital',
   [RoleCode.LIVREUR_PHARM_REDIST]: 'Livreur Pharmacie',
-  
+
   // Finance Labels
   [RoleCode.DAF_NATIONAL]: 'DAF National',
   [RoleCode.COMPTABLE_NATIONAL]: 'Comptable National',
@@ -113,6 +119,7 @@ export interface User {
   entityType?: string;
   entityId?: string;
   isActive: boolean;
+  status: UserStatus;
 }
 
 export interface AuthState {

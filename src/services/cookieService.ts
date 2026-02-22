@@ -88,7 +88,7 @@ class CookieService {
         try {
             // D'abord, chercher si le consentement existe déjà
             const { data: existing } = await supabase
-                .from('user_cookie_consents')
+                .from('user_cookie_consents' as unknown as any)
                 .select('id')
                 .eq('user_id', userId)
                 .single();
@@ -96,9 +96,9 @@ class CookieService {
             if (existing) {
                 // Mettre à jour
                 await supabase
-                    .from('user_cookie_consents')
+                    .from('user_cookie_consents' as unknown as any)
                     .update({
-                        preferences: preferences as any,
+                        preferences: preferences as unknown as any,
                         user_agent: navigator.userAgent,
                         updated_at: new Date().toISOString()
                     })
@@ -106,13 +106,13 @@ class CookieService {
             } else {
                 // Créer
                 await supabase
-                    .from('user_cookie_consents')
+                    .from('user_cookie_consents' as unknown as any)
                     .insert({
                         user_id: userId,
-                        preferences: preferences as any,
+                        preferences: preferences as unknown as any,
                         user_agent: navigator.userAgent,
                         ip_address: null
-                    });
+                    } as unknown as any);
             }
         } catch (error) {
             console.error('Error saving cookie preferences to backend:', error);
@@ -126,7 +126,7 @@ class CookieService {
     async loadFromBackend(userId: string): Promise<CookiePreferences | null> {
         try {
             const { data, error } = await supabase
-                .from('user_cookie_consents')
+                .from('user_cookie_consents' as unknown as any)
                 .select('preferences')
                 .eq('user_id', userId)
                 .single();
@@ -136,11 +136,11 @@ class CookieService {
                 return null;
             }
 
-            const preferences = data.preferences as CookiePreferences;
-            
+            const preferences = (data as any)?.preferences as CookiePreferences;
+
             // Synchroniser avec localStorage
             localStorage.setItem(this.COOKIE_CONSENT_KEY, JSON.stringify(preferences));
-            
+
             return preferences;
         } catch (error) {
             console.error('Error loading cookie preferences from backend:', error);
@@ -172,8 +172,8 @@ class CookieService {
      */
     private enablePerformanceCookies(): void {
         // Exemple: Activer Google Analytics
-        if (typeof window !== 'undefined' && (window as any).gtag) {
-            (window as any).gtag('consent', 'update', {
+        if (typeof window !== 'undefined' && (window as unknown as { gtag: Function }).gtag) {
+            (window as unknown as { gtag: Function }).gtag('consent', 'update', {
                 analytics_storage: 'granted'
             });
         }
@@ -183,8 +183,8 @@ class CookieService {
      * Désactive les cookies de performance
      */
     private disablePerformanceCookies(): void {
-        if (typeof window !== 'undefined' && (window as any).gtag) {
-            (window as any).gtag('consent', 'update', {
+        if (typeof window !== 'undefined' && (window as unknown as { gtag: Function }).gtag) {
+            (window as unknown as { gtag: Function }).gtag('consent', 'update', {
                 analytics_storage: 'denied'
             });
         }
@@ -258,7 +258,7 @@ class CookieService {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 await supabase
-                    .from('user_cookie_consents')
+                    .from('user_cookie_consents' as unknown as any)
                     .delete()
                     .eq('user_id', user.id);
             }

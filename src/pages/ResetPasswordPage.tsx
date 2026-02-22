@@ -65,9 +65,10 @@ export default function ResetPasswordPage() {
             setTimeout(() => {
                 navigate('/login');
             }, 2000);
-        } catch (err: any) {
-            setError(err.message || 'Erreur lors de la réinitialisation');
-            toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+        } catch (err: unknown) {
+            const error = err as Error;
+            setError(error.message || 'Erreur lors de la réinitialisation');
+            toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }

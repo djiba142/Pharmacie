@@ -11,10 +11,10 @@ export interface AuditLog {
     entity_type: string;
     entity_id: string;
     changes?: {
-        before: Record<string, any>;
-        after: Record<string, any>;
+        before: Record<string, unknown>;
+        after: Record<string, unknown>;
     };
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     status: 'SUCCESS' | 'FAILURE';
     error_message?: string | null;
 }

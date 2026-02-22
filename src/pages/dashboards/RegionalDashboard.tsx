@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useRegionalData } from '@/hooks/useRegionalData';
 import { useNavigate } from 'react-router-dom';
 import {
-    Package, AlertTriangle, Building, TrendingUp, MapPin, Percent
+    Package, AlertTriangle, Building, TrendingUp, MapPin, Percent, Users
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -74,44 +74,61 @@ export default function RegionalDashboard() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <KPICard
-                    title="DPS de la Région"
+                    title="DPS Région"
                     value={stats?.dpsCount || 0}
                     icon={Building}
                     variant="default"
                 />
                 <KPICard
-                    title="Total Stocks Région"
+                    title="Stocks Région"
                     value={stats?.totalStocks || 0}
                     icon={Package}
                     variant="info"
                 />
                 <KPICard
-                    title="Alertes Régionales"
+                    title="Alertes"
                     value={stats?.alertes || 0}
                     icon={AlertTriangle}
                     variant={(stats?.alertes || 0) > 20 ? 'danger' : (stats?.alertes || 0) > 0 ? 'warning' : 'success'}
                 />
                 <KPICard
-                    title="Commandes Région"
+                    title="Utilisateurs"
+                    value={stats?.activeUsers || 0}
+                    icon={Users}
+                    variant="default"
+                />
+                <KPICard
+                    title="Commandes"
                     value={stats?.totalCommandes || 0}
                     icon={TrendingUp}
                     variant="success"
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Graphique Stocks par DPS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Graphique Performance DPS */}
                 <StatsChart
                     data={performanceData}
-                    title="Performance des DPS"
+                    title="Taux de Performance"
                     type="bar"
                     dataKey="performance"
                     xAxisKey="name"
-                    color="#059669"
+                    color="#0ea5e9"
                     icon={Percent}
                     height={280}
+                />
+
+                {/* Distribution Stock */}
+                <StatsChart
+                    data={data?.dpsPerformance?.map(d => ({ name: d.dpsName, value: d.stocks })) || []}
+                    title="Répartition des Stocks"
+                    type="pie"
+                    dataKey="value"
+                    xAxisKey="name"
+                    height={280}
+                    showLegend
                 />
 
                 {/* Alertes */}

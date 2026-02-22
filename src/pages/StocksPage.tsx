@@ -13,13 +13,46 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Package, Search, Filter, Download, Plus, AlertTriangle, ArrowUpDown, Eye, Edit, TrendingDown, TrendingUp, BarChart3,
+  Package, Search, Filter, Download, Plus, AlertTriangle, ArrowUpDown, Eye, Edit, TrendingDown, TrendingUp, BarChart3, QrCode, FileSpreadsheet, Upload, Pill
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { QRScannerDialog } from '@/components/ui/QRScannerDialog';
+import * as XLSX from 'xlsx';
 
 type StockStatus = 'OK' | 'ALERTE' | 'CRITIQUE' | 'PERIME';
 
-function getStatus(stock: any): StockStatus {
+interface StockItem {
+  id: string;
+  lot_id: string;
+  entite_id: string;
+  entite_type: string;
+  quantite_actuelle: number;
+  seuil_alerte: number;
+  seuil_minimal: number;
+  zone_stockage?: string;
+  lots?: {
+    id: string;
+    numero_lot: string;
+    date_peremption: string;
+    medicaments?: {
+      id: string;
+      dci: string;
+      dosage?: string;
+      forme_pharmaceutique?: string;
+      categorie?: string;
+      classe_therapeutique?: string;
+    }
+  };
+  medicament?: string;
+  dosage?: string;
+  forme?: string;
+  categorie?: string;
+  lot?: string;
+  peremption?: string;
+  entite_nom?: string;
+}
+
+function getStatus(stock: StockItem): StockStatus {
   const now = new Date();
   const peremption = new Date(stock.lots?.date_peremption);
   if (peremption < now) return 'PERIME';
@@ -47,6 +80,7 @@ const StocksPage = () => {
   const [createDialog, setCreateDialog] = useState(false);
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustMotif, setAdjustMotif] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch real stocks from Supabase
@@ -75,12 +109,12 @@ const StocksPage = () => {
     queryFn: async () => {
       const { data } = await supabase.from('drs').select('id, nom');
       const map: Record<string, string> = {};
-      (data || []).forEach((d: any) => { map[d.id] = d.nom; });
+      (data || []).forEach((d) => { map[d.id] = d.nom; });
       return map;
     },
   });
 
-  const stocks = rawStocks.map((s: any) => ({
+  const stocks = (rawStocks as StockItem[]).map((s) => ({
     ...s,
     medicament: s.lots?.medicaments?.dci || 'N/A',
     dosage: s.lots?.medicaments?.dosage || '',
@@ -91,10 +125,10 @@ const StocksPage = () => {
     entite_nom: drsMap[s.entite_id] || s.entite_type || '',
   }));
 
-  const categories = [...new Set(stocks.map((s: any) => s.categorie).filter(Boolean))];
+  const categories = [...new Set(stocks.map((s) => s.categorie).filter(Boolean))];
 
   const filteredStocks = useMemo(() => {
-    const result = stocks.filter((s: any) => {
+    const result = (stocks as StockItem[]).filter((s) => {
       const matchSearch = s.medicament.toLowerCase().includes(search.toLowerCase()) ||
         s.lot.toLowerCase().includes(search.toLowerCase());
       const status = getStatus(s);
@@ -102,11 +136,11 @@ const StocksPage = () => {
       return matchSearch && matchStatus;
     });
 
-    result.sort((a: any, b: any) => {
+    result.sort((a, b) => {
       let cmp = 0;
-      if (sortBy === 'medicament') cmp = a.medicament.localeCompare(b.medicament);
+      if (sortBy === 'medicament') cmp = (a.medicament || '').localeCompare(b.medicament || '');
       else if (sortBy === 'quantite') cmp = a.quantite_actuelle - b.quantite_actuelle;
-      else if (sortBy === 'peremption') cmp = a.peremption.localeCompare(b.peremption);
+      else if (sortBy === 'peremption') cmp = (a.peremption || '').localeCompare(b.peremption || '');
       else if (sortBy === 'status') cmp = getStatus(a).localeCompare(getStatus(b));
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -116,7 +150,7 @@ const StocksPage = () => {
 
   const counts = useMemo(() => {
     const c = { OK: 0, ALERTE: 0, CRITIQUE: 0, PERIME: 0 };
-    stocks.forEach((s: any) => c[getStatus(s)]++);
+    (stocks as StockItem[]).forEach((s) => c[getStatus(s)]++);
     return c;
   }, [stocks]);
 
@@ -124,12 +158,11 @@ const StocksPage = () => {
     if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortBy(col); setSortDir('asc'); }
   };
-
   const handleAdjust = async () => {
     if (!adjustDialog || !adjustQty || !adjustMotif) return;
 
     try {
-      const stock = stocks.find((s: any) => s.id === adjustDialog);
+      const stock = (stocks as StockItem[]).find((s) => s.id === adjustDialog);
       if (!stock) throw new Error('Stock introuvable');
 
       const adjustment = parseInt(adjustQty);
@@ -144,7 +177,6 @@ const StocksPage = () => {
         return;
       }
 
-      // Update stock quantity
       const { error: updateError } = await supabase
         .from('stocks')
         .update({ quantite_actuelle: newQuantity })
@@ -152,41 +184,163 @@ const StocksPage = () => {
 
       if (updateError) throw updateError;
 
-      // Log the movement
-      const { error: movementError } = await supabase
-        .from('mouvements_stock')
-        .insert({
-          stock_id: adjustDialog,
-          type: adjustment > 0 ? 'ENTREE' : 'SORTIE',
-          quantite: Math.abs(adjustment),
-          commentaire: adjustMotif,
-        });
-
-      if (movementError) {
-        // Movement log failed silently
-      }
+      await supabase.from('mouvements_stock').insert({
+        stock_id: adjustDialog,
+        type: adjustment > 0 ? 'ENTREE' : 'SORTIE',
+        quantite: Math.abs(adjustment),
+        commentaire: adjustMotif,
+      });
 
       toast({
         title: 'Stock ajusté',
         description: `Quantité ${adjustment > 0 ? 'augmentée' : 'diminuée'} de ${Math.abs(adjustment)} unités`
       });
 
-      // Refresh data smoothly without page reload
       await queryClient.invalidateQueries({ queryKey: ['stocks-page'] });
-
       setAdjustDialog(null);
       setAdjustQty('');
       setAdjustMotif('');
-    } catch (err: any) {
-      toast({
-        title: 'Erreur',
-        description: err.message,
-        variant: 'destructive'
-      });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     }
   };
 
-  const detailStock = stocks.find((s: any) => s.id === detailDialog);
+  const handleBulkImport = async (file: File) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+
+        console.log("Importing rows:", rows.length);
+        toast({ title: 'Importation...', description: `Traitement de ${rows.length} lignes en cours.` });
+
+        let successCount = 0;
+        let skipCount = 0;
+
+        for (const row of rows) {
+          try {
+            // Find medicament by DCI (Désignation)
+            const designation = row['Désignation'];
+            const lotNum = row['Lot'];
+            if (!designation || !lotNum) {
+              skipCount++;
+              continue;
+            }
+
+            const { data: med } = await supabase
+              .from('medicaments')
+              .select('id')
+              .ilike('dci', designation)
+              .maybeSingle();
+
+            if (!med) {
+              console.warn(`Médicament non trouvé: ${designation}`);
+              skipCount++;
+              continue;
+            }
+
+            // Find or create lot
+            const { data: lot, error: lotErr } = await supabase
+              .from('lots')
+              .select('id')
+              .eq('medicament_id', med.id)
+              .eq('numero_lot', lotNum)
+              .maybeSingle();
+
+            let targetLotId = lot?.id;
+
+            if (!targetLotId) {
+              const qty = parseInt(row['Quantité'] || '0');
+              const { data: newLot, error: insErr } = await supabase
+                .from('lots')
+                .insert({
+                  medicament_id: med.id,
+                  numero_lot: lotNum,
+                  date_fabrication: new Date().toISOString(),
+                  date_peremption: row['Péremption'] ? new Date(row['Péremption']).toISOString() : new Date(Date.now() + 31536000000 * 2).toISOString(), // +2 ans par défaut
+                  quantite_initiale: qty,
+                })
+                .select()
+                .single();
+
+              if (insErr) throw insErr;
+              if (!newLot) throw new Error('Échec de création du lot');
+              targetLotId = newLot.id;
+            }
+
+            // Update or Insert stock
+            const qty = parseInt(row['Quantité'] || '0');
+            const { data: existingStock } = await supabase
+              .from('stocks')
+              .select('id, quantite_actuelle')
+              .eq('lot_id', targetLotId)
+              .eq('entite_id', entityId)
+              .maybeSingle();
+
+            if (existingStock) {
+              await supabase.from('stocks').update({ quantite_actuelle: qty }).eq('id', existingStock.id);
+            } else {
+              await supabase.from('stocks').insert({
+                lot_id: targetLotId,
+                entite_id: entityId,
+                entite_type: level === 'regional' ? 'DRS' : (level === 'prefectoral' ? 'DPS' : 'STRUCTURE'),
+                quantite_actuelle: qty,
+                seuil_alerte: parseInt(row['Seuil Alerte'] || '10'),
+                seuil_minimal: 5,
+              });
+            }
+            successCount++;
+          } catch (rowErr) {
+            console.error("Error processing row:", row, rowErr);
+            skipCount++;
+          }
+        }
+
+        toast({
+          title: 'Importation terminée',
+          description: `${successCount} produits mis à jour, ${skipCount} erreurs/sauts.`
+        });
+        queryClient.invalidateQueries({ queryKey: ['stocks-page'] });
+      };
+      reader.readAsBinaryString(file);
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur import', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleExcelExport = () => {
+    try {
+      const data = filteredStocks.map(s => ({
+        'Désignation': s.medicament,
+        'Dosage': s.dosage,
+        'Forme': s.forme,
+        'Lot': s.lot,
+        'Péremption': s.peremption ? new Date(s.peremption).toLocaleDateString('fr-FR') : 'N/A',
+        'Quantité': s.quantite_actuelle,
+        'Seuil Alerte': s.seuil_alerte,
+        'État': getStatus(s),
+        'Entité': s.entite_nom,
+        'Zone': s.zone_stockage || 'N/A'
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, 'Stocks');
+      XLSX.writeFile(wb, `stocks-livramed-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: 'Excel exporté', description: 'Le fichier a été généré avec succès.' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur export', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const detailStock = (stocks as StockItem[]).find((s) => s.id === detailDialog);
 
   if (isLoading) {
     return <div className="space-y-4 animate-fade-in"><Skeleton className="h-8 w-64" /><div className="grid grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div><Skeleton className="h-64 rounded-xl" /></div>;
@@ -200,8 +354,25 @@ const StocksPage = () => {
           <p className="text-sm text-muted-foreground mt-1">Données en temps réel — {stocks.length} entrée(s)</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" /> Exporter</Button>
-          <Button size="sm" onClick={() => setCreateDialog(true)}><Plus className="h-4 w-4 mr-2" /> Nouveau mouvement</Button>
+          <Button variant="outline" size="sm" onClick={handleExcelExport}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Exporter Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => document.getElementById('import-excel')?.click()}>
+            <Upload className="h-4 w-4 mr-2" /> Importer Stock
+          </Button>
+          <input
+            type="file"
+            id="import-excel"
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleBulkImport(file);
+            }}
+          />
+          <Button size="sm" onClick={() => setCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nouveau mouvement
+          </Button>
         </div>
       </div>
 
@@ -261,6 +432,7 @@ const StocksPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Image</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => toggleSort('medicament')}>
                   <div className="flex items-center gap-1">Médicament <ArrowUpDown className="h-3 w-3" /></div>
                 </TableHead>
@@ -278,11 +450,16 @@ const StocksPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStocks.map((stock: any) => {
+              {(filteredStocks as StockItem[]).map((stock) => {
                 const status = getStatus(stock);
                 const cfg = statusConfig[status];
                 return (
                   <TableRow key={stock.id}>
+                    <TableCell>
+                      <div className="h-10 w-10 rounded-lg bg-slate-50 border flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                        <Pill className="h-5 w-5 text-muted-foreground/30" />
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium text-sm">{stock.medicament} {stock.dosage}</p>

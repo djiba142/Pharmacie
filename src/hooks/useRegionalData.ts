@@ -18,7 +18,7 @@ export interface Commande {
     id: string;
     statut: string;
     created_at: string;
-    entite_origine_id: string;
+    entite_demandeur_id: string;
 }
 
 export interface Livraison {
@@ -52,6 +52,7 @@ export interface RegionalDataResult {
         alertes: number;
         stockTotalQuantity: number;
         dpsCount: number;
+        activeUsers: number;
     };
     dpsPerformance: Array<{
         dpsId: string;
@@ -90,11 +91,21 @@ export function useRegionalData() {
 
             const dpsList = (dps as DPS[]) || [];
             const dpsIds = dpsList.map(d => d.id);
-            const allEntityIds = [entityId, ...dpsIds];
 
-            // 3. Lancer les requêtes en parallèle
-            const [stocksRes, commandesRes, livraisonsRes] = await Promise.all([
-                // Stocks de la région (DRS + toutes les DPS)
+            // 3. Récupérer les structures de toutes ces DPS
+            const { data: structures, error: structuresError } = await supabase
+                .from('structures')
+                .select('id')
+                .in('dps_id', dpsIds);
+
+            if (structuresError) console.warn('Erreur structures régionales:', structuresError);
+            const structureIds = (structures || []).map(s => s.id);
+
+            const allEntityIds = [entityId, ...dpsIds, ...structureIds];
+
+            // 4. Lancer les requêtes en parallèle
+            const [stocksRes, commandesRes, livraisonsRes, profilesCountRes] = await Promise.all([
+                // Stocks de la région (DRS + toutes les DPS + toutes les structures)
                 supabase
                     .from('stocks')
                     .select(`
@@ -110,23 +121,44 @@ export function useRegionalData() {
                     .in('entite_id', allEntityIds),
 
                 // Commandes de la région
-                (supabase
+                supabase
                     .from('commandes')
-                    .select('*') as any)
-                    .in('entite_origine_id', allEntityIds),
+                    .select('*')
+                    .in('entite_demandeur_id', allEntityIds),
 
-                // Livraisons vers la région
-                (supabase
+                supabase
                     .from('livraisons')
-                    .select('*') as any)
-                    .in('entite_destination_id', allEntityIds)
+                    .select('*')
+                    .in('entite_destination_id', allEntityIds),
+
+                // Utilisateurs actifs de la région
+                supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .in('entity_id', allEntityIds)
+                    .eq('is_active', true)
             ]);
 
             if (stocksRes.error) throw new Error(`Erreur stocks: ${stocksRes.error.message}`);
             if (commandesRes.error) throw new Error(`Erreur commandes: ${commandesRes.error.message}`);
             if (livraisonsRes.error) throw new Error(`Erreur livraisons: ${livraisonsRes.error.message}`);
 
-            const stocks: Stock[] = (stocksRes.data || []).map((item: any) => ({
+            interface StockWithLot {
+                id: string;
+                quantite_actuelle: number;
+                seuil_alerte: number;
+                entite_id: string;
+                prix_unitaire?: number;
+                lot?: {
+                    date_peremption: string | null;
+                    medicament?: {
+                        nom_commercial: string;
+                        dci: string;
+                    };
+                };
+            }
+
+            const stocks: Stock[] = (stocksRes.data as unknown as StockWithLot[] || []).map((item) => ({
                 id: item.id,
                 nom: item.lot?.medicament?.nom_commercial || item.lot?.medicament?.dci || 'Médicament inconnu',
                 quantite_actuelle: item.quantite_actuelle,
@@ -135,7 +167,7 @@ export function useRegionalData() {
                 entite_id: item.entite_id,
                 prix_unitaire: item.prix_unitaire
             }));
-            const commandes = (commandesRes.data as Commande[]) || [];
+            const commandes = (commandesRes.data as unknown as Commande[]) || [];
             const livraisons = (livraisonsRes.data as Livraison[]) || [];
 
             // 4. Calculs métier
@@ -168,7 +200,8 @@ export function useRegionalData() {
                     totalLivraisons: livraisons.length,
                     alertes: alertStocks.length,
                     stockTotalQuantity: stocks.reduce((sum, s) => sum + (s.quantite_actuelle || 0), 0),
-                    dpsCount: dpsList.length
+                    dpsCount: dpsList.length,
+                    activeUsers: profilesCountRes.count || 0
                 },
                 dpsPerformance
             };

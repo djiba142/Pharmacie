@@ -26,6 +26,26 @@ const STATUTS = {
   REJETEE: { label: 'Rejetée', className: 'bg-destructive/10 text-destructive border-destructive/20', icon: XCircle },
 };
 
+interface DemandeInscription {
+  id: string;
+  numero_suivi: string;
+  nom_structure: string;
+  type_structure: string;
+  region: string;
+  prefecture: string;
+  responsable_prenom: string;
+  responsable_nom: string;
+  responsable_telephone?: string;
+  responsable_num_ordre?: string;
+  statut: string;
+  created_at: string;
+  date_validation_dps?: string;
+  date_validation_drs?: string;
+  date_validation_pcg?: string;
+  motif_rejet?: string;
+  documents?: { label: string }[];
+}
+
 type StatutKey = keyof typeof STATUTS;
 
 export default function ValidationInscriptionsPage() {
@@ -48,7 +68,7 @@ export default function ValidationInscriptionsPage() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data || []) as unknown as DemandeInscription[];
     },
   });
 
@@ -65,8 +85,12 @@ export default function ValidationInscriptionsPage() {
 
   const validateMutation = useMutation({
     mutationFn: async ({ id, nextStatut, field }: { id: string; nextStatut: string; field: string }) => {
-      const { data: session } = await supabase.auth.getSession();
-      const updates: any = { statut: nextStatut, [field]: session.session?.user.id, [`date_${field.replace('validated_by_', 'validation_')}`]: new Date().toISOString() };
+      const { data: sessionData } = await supabase.auth.getSession();
+      const updates: Record<string, string | null> = {
+        statut: nextStatut,
+        [field]: sessionData.session?.user.id || null,
+        [`date_${field.replace('validated_by_', 'validation_')}`]: new Date().toISOString()
+      };
       const { error } = await supabase.from('demandes_inscription').update(updates).eq('id', id);
       if (error) throw error;
     },
@@ -75,7 +99,7 @@ export default function ValidationInscriptionsPage() {
       toast({ title: 'Demande validée' });
       setSelectedId(null);
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   const rejectMutation = useMutation({
@@ -88,7 +112,7 @@ export default function ValidationInscriptionsPage() {
       toast({ title: 'Demande rejetée' });
       setShowReject(false); setRejectId(null); setRejectMotif('');
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   const getActions = (statut: StatutKey) => {
@@ -99,8 +123,8 @@ export default function ValidationInscriptionsPage() {
     return actions.filter(a => a.allowedLevels.includes(level));
   };
 
-  const detail = demandes.find((d: any) => d.id === selectedId);
-  const filtered = demandes.filter((d: any) => {
+  const detail = demandes.find((d) => d.id === selectedId);
+  const filtered = demandes.filter((d) => {
     const matchSearch = d.numero_suivi.toLowerCase().includes(search.toLowerCase()) || d.nom_structure.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || d.statut === statusFilter;
     return matchSearch && matchStatus;
@@ -108,9 +132,9 @@ export default function ValidationInscriptionsPage() {
 
   const counts = {
     total: demandes.length,
-    en_attente: demandes.filter((d: any) => !['VALIDEE_PCG', 'REJETEE'].includes(d.statut)).length,
-    validees: demandes.filter((d: any) => d.statut === 'VALIDEE_PCG').length,
-    rejetees: demandes.filter((d: any) => d.statut === 'REJETEE').length,
+    en_attente: demandes.filter((d) => !['VALIDEE_PCG', 'REJETEE'].includes(d.statut)).length,
+    validees: demandes.filter((d) => d.statut === 'VALIDEE_PCG').length,
+    rejetees: demandes.filter((d) => d.statut === 'REJETEE').length,
   };
 
   if (isLoading) return <div className="space-y-4 animate-fade-in"><Skeleton className="h-8 w-64" /><Skeleton className="h-64 rounded-xl" /></div>;
@@ -164,7 +188,7 @@ export default function ValidationInscriptionsPage() {
             <TableHead className="text-right">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {filtered.map((d: any) => {
+            {filtered.map((d) => {
               const cfg = STATUTS[d.statut as StatutKey] || STATUTS.SOUMISE;
               return (
                 <TableRow key={d.id}>
@@ -222,11 +246,11 @@ export default function ValidationInscriptionsPage() {
               </div>
 
               {/* Documents */}
-              {detail.documents && (detail.documents as any[]).length > 0 && (
+              {detail.documents && (detail.documents as unknown as { label: string }[]).length > 0 && (
                 <div className="border-t pt-4">
-                  <p className="text-xs font-semibold mb-2">Documents ({(detail.documents as any[]).length})</p>
+                  <p className="text-xs font-semibold mb-2">Documents ({(detail.documents as unknown as { label: string }[]).length})</p>
                   <div className="space-y-1">
-                    {(detail.documents as any[]).map((doc: any, i: number) => (
+                    {(detail.documents as unknown as { label: string }[]).map((doc, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs p-2 bg-muted/50 rounded">
                         <FileText className="h-3 w-3" />
                         <span>{doc.label}</span>

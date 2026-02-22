@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { useUserLevel } from '@/hooks/useUserLevel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +17,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
   ShoppingCart, Plus, Search, Filter, Eye, CheckCircle, XCircle, Clock,
-  ArrowRight, Send, Truck, Package,
+  ArrowRight, Send, Truck, Package, Building2
 } from 'lucide-react';
+import { useEffect } from 'react';
+
+interface Medicament {
+  id: string;
+  dci: string;
+  dosage: string | null;
+  forme_pharmaceutique: string | null;
+}
 
 const STATUTS = {
   BROUILLON: { label: 'Brouillon', className: 'bg-muted text-muted-foreground border-border', icon: Clock },
@@ -78,6 +87,7 @@ export default function CommandesPage() {
   const [newPriorite, setNewPriorite] = useState('NORMALE');
   const [newDateLivraison, setNewDateLivraison] = useState('');
   const [lignes, setLignes] = useState<{ medicament_id: string; quantite: number }[]>([]);
+  const [supplier, setSupplier] = useState<{ id: string; type: string; nom: string } | null>(null);
 
   // Fetch commandes
   const { data: commandes = [], isLoading } = useQuery({
@@ -92,15 +102,100 @@ export default function CommandesPage() {
     },
   });
 
-  // Fetch medicaments for create form
+  // Fetch medicaments with available stock for the current entity
   const { data: medicaments = [] } = useQuery({
-    queryKey: ['medicaments-list'],
+    queryKey: ['medicaments-with-stock', entityId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('medicaments').select('id, dci, dosage, forme_pharmaceutique').eq('is_active', true);
-      if (error) throw error;
-      return data;
+      // Fetch medicaments
+      const { data: meds, error: mErr } = await supabase
+        .from('medicaments')
+        .select('id, dci, dosage, forme_pharmaceutique')
+        .eq('is_active', true);
+      if (mErr) throw mErr;
+
+      // Fetch current stock levels for this entity
+      const { data: stockData } = await supabase
+        .from('stocks')
+        .select('lot_id, quantite_actuelle, lots(medicament_id)')
+        .eq('entite_id', entityId);
+
+      // Aggregate stock by medicament
+      const stockMap: Record<string, number> = {};
+      interface StockItem { lot_id: string; quantite_actuelle: number; lots: { medicament_id: string } | null };
+      (stockData as unknown as StockItem[] || []).forEach((s) => {
+        const mid = s.lots?.medicament_id;
+        if (mid) stockMap[mid] = (stockMap[mid] || 0) + s.quantite_actuelle;
+      });
+
+      return (meds as any as Medicament[] || []).map(m => ({
+        ...m,
+        stock_actuel: stockMap[m.id] || 0
+      }));
     },
   });
+
+  // Fetch current user's region and potential suppliers
+  const { data: procurementInfo } = useQuery({
+    queryKey: ['procurement-info', entityId, level],
+    queryFn: async () => {
+      if (!entityId) return null;
+
+      let region = '';
+      let defaultSupplier = null;
+
+      // 1. Identify region
+      if (level === 'peripheral') {
+        const { data: str } = await supabase.from('structures').select('nom, dps_id').eq('id', entityId).single();
+        if (str?.dps_id) {
+          const { data: dps } = await supabase.from('dps').select('prefecture, drs_id').eq('id', str.dps_id).single();
+          if (dps?.drs_id) {
+            const { data: drs } = await supabase.from('drs').select('region').eq('id', dps.drs_id).single();
+            region = drs?.region || '';
+          }
+        }
+      } else if (level === 'prefectoral') {
+        const { data: dps } = await supabase.from('dps').select('prefecture, drs_id').eq('id', entityId).single();
+        if (dps?.drs_id) {
+          const { data: drs } = await supabase.from('drs').select('region').eq('id', dps.drs_id).single();
+          region = drs?.region || '';
+        }
+      } else if (level === 'regional') {
+        const { data: drs } = await supabase.from('drs').select('region').eq('id', entityId).single();
+        region = drs?.region || '';
+      }
+
+      // 2. Identify PCG Agencies based on region
+      const { data: pcgAgencies } = await supabase.from('drs').select('id, nom, region').ilike('nom', '%PCG%');
+      const { data: pcgCentrale } = await supabase.from('drs').select('id, nom, region').ilike('nom', '%Siège%').maybeSingle();
+
+      const normalizedRegion = region.trim().toLowerCase();
+
+      if (normalizedRegion.includes('conakry')) {
+        // Conakry picks PCG Centrale
+        defaultSupplier = pcgCentrale || (pcgAgencies?.find(a => a.region.toLowerCase().includes('conakry'))) || null;
+      } else if (normalizedRegion.includes('kankan')) {
+        // Kankan picks PCG Kankan
+        defaultSupplier = pcgAgencies?.find(a => a.nom.toLowerCase().includes('kankan')) || null;
+      } else {
+        // Default to regional agency if matches, otherwise central
+        defaultSupplier = pcgAgencies?.find(a => a.region.toLowerCase() === normalizedRegion) || pcgCentrale || null;
+      }
+
+      return { region, defaultSupplier, allSuppliers: pcgAgencies || [] };
+    },
+    enabled: !!entityId,
+  });
+
+  // Set default supplier when info is loaded
+  useEffect(() => {
+    if (procurementInfo?.defaultSupplier && !supplier) {
+      setSupplier({
+        id: procurementInfo.defaultSupplier.id,
+        type: 'DRS',
+        nom: procurementInfo.defaultSupplier.nom
+      });
+    }
+  }, [procurementInfo, supplier]);
 
   // Create commande mutation
   const createMutation = useMutation({
@@ -112,6 +207,8 @@ export default function CommandesPage() {
         numero_commande: numero,
         entite_demandeur_id: entityId || crypto.randomUUID(),
         entite_demandeur_type: level === 'national' ? 'PCG' : level === 'regional' ? 'DRS' : level === 'prefectoral' ? 'DPS' : 'STRUCTURE',
+        entite_fournisseur_id: supplier?.id || null,
+        entite_fournisseur_type: supplier?.type || 'DRS',
         commentaire: newComment || null,
         priorite: newPriorite,
         date_livraison_souhaitee: newDateLivraison || null,
@@ -135,14 +232,14 @@ export default function CommandesPage() {
       setLignes([]);
       toast({ title: 'Commande créée', description: 'La commande a été enregistrée avec succès.' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, statut }: { id: string; statut: string }) => {
       const { data: session } = await supabase.auth.getSession();
-      const updates: any = { statut };
+      const updates: Record<string, unknown> = { statut };
       if (['VALIDEE_DPS', 'VALIDEE_DRS', 'APPROUVEE_PCG'].includes(statut)) {
         updates.validated_by = session.session?.user.id;
         updates.date_validation = new Date().toISOString();
@@ -154,7 +251,7 @@ export default function CommandesPage() {
       queryClient.invalidateQueries({ queryKey: ['commandes'] });
       toast({ title: 'Statut mis à jour' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   // Fetch lignes for detail
@@ -172,13 +269,24 @@ export default function CommandesPage() {
     enabled: !!selectedCommande,
   });
 
-  const filtered = commandes.filter((c: any) => {
+  interface CommandeItem {
+    id: string;
+    numero_commande: string;
+    statut: string;
+    priorite: string;
+    date_commande: string;
+    date_livraison_souhaitee?: string;
+    date_validation?: string;
+    commentaire?: string;
+  }
+
+  const filtered = (commandes as unknown as CommandeItem[]).filter((c) => {
     const matchSearch = c.numero_commande.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || c.statut === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const detail = commandes.find((c: any) => c.id === selectedCommande);
+  const detail = (commandes as unknown as CommandeItem[]).find((c) => c.id === selectedCommande);
   const detailActions = detail ? getAvailableActions(detail.statut as StatutKey, user?.role) : [];
 
   const addLigne = () => {
@@ -262,7 +370,7 @@ export default function CommandesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((cmd: any) => {
+              {filtered.map((cmd) => {
                 const cfg = STATUTS[cmd.statut as StatutKey] || STATUTS.BROUILLON;
                 return (
                   <TableRow key={cmd.id}>
@@ -301,52 +409,139 @@ export default function CommandesPage() {
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="font-display">Nouvelle commande</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle className="font-display">Nouvelle commande — {procurementInfo?.region ? `Région ${procurementInfo.region}` : ''}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Priorité</Label>
-                <Select value={newPriorite} onValueChange={setNewPriorite}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NORMALE">Normale</SelectItem>
-                    <SelectItem value="URGENTE">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-6 py-4">
+                {/* Section Fournisseur - Plus visible */}
+                <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border/50 shadow-sm">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    Fournisseur sélectionné
+                  </Label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <Select
+                        value={supplier?.id}
+                        onValueChange={(val) => {
+                          const s = procurementInfo?.allSuppliers?.find(x => x.id === val);
+                          if (s) setSupplier({ id: s.id, type: 'DRS', nom: s.nom });
+                        }}
+                      >
+                        <SelectTrigger className="bg-background border-primary/20 hover:border-primary/50 transition-colors">
+                          <SelectValue placeholder="Choisir un fournisseur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {procurementInfo?.allSuppliers?.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>{s.nom}</SelectItem>
+                          ))}
+                          {!procurementInfo?.allSuppliers?.length && (
+                            <SelectItem value="none" disabled>Aucun fournisseur disponible</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-full sm:w-48">
+                      <Select value={newPriorite} onValueChange={setNewPriorite}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Priorité" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NORMALE">Normale</SelectItem>
+                          <SelectItem value="URGENTE">Urgente</SelectItem>
+                          <SelectItem value="CRITIQUE">Critique</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Le fournisseur est déterminé automatiquement selon votre région (PCG-Siège pour Conakry, PCG-Kankan pour Kankan).
+                  </p>
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date livraison souhaitée</Label>
                 <Input type="date" value={newDateLivraison} onChange={(e) => setNewDateLivraison(e.target.value)} />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>Commentaire</Label>
-              <Textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Instructions spéciales..." />
+              <Textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Notez ici toute instruction spécifique..." className="h-20" />
             </div>
-            <div className="space-y-2">
+
+            <div className="space-y-3 py-2 border-t">
               <div className="flex items-center justify-between">
-                <Label>Lignes de commande</Label>
-                <Button variant="outline" size="sm" onClick={addLigne}><Plus className="h-3 w-3 mr-1" />Ajouter</Button>
-              </div>
-              {lignes.map((l, i) => (
-                <div key={i} className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Select value={l.medicament_id} onValueChange={(v) => { const n = [...lignes]; n[i].medicament_id = v; setLignes(n); }}>
-                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {medicaments.map((m: any) => (
-                          <SelectItem key={m.id} value={m.id}>{m.dci} {m.dosage || ''}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Input type="number" className="w-24" min={1} value={l.quantite} onChange={(e) => { const n = [...lignes]; n[i].quantite = parseInt(e.target.value) || 1; setLignes(n); }} />
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => setLignes(lignes.filter((_, j) => j !== i))}>
-                    <XCircle className="h-4 w-4" />
-                  </Button>
+                <div>
+                  <Label className="text-sm font-bold">Produits sélectionnés</Label>
+                  <p className="text-[10px] text-muted-foreground">Votre stock actuel est affiché pour chaque produit</p>
                 </div>
-              ))}
+                <Button variant="outline" size="sm" onClick={addLigne} className="h-8"><Plus className="h-3 w-3 mr-1" />Ajouter un item</Button>
+              </div>
+
+              <div className="max-h-[250px] overflow-y-auto space-y-3 pr-1">
+                {lignes.map((l, i) => {
+                  const selectedMed = medicaments.find(m => m.id === l.medicament_id);
+                  return (
+                    <div key={i} className="flex gap-3 items-start bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <div className="flex-1 space-y-2">
+                        <Select value={l.medicament_id} onValueChange={(v) => { const n = [...lignes]; n[i].medicament_id = v; setLignes(n); }}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {medicaments.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                <div className="flex items-center justify-between w-full min-w-[300px]">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-muted-foreground/30" />
+                                    <div className="text-left">
+                                      <p className="text-sm font-medium leading-none">{m.dci}</p>
+                                      <p className="text-[10px] text-muted-foreground mt-1">{m.dosage || ''} — {m.forme_pharmaceutique || ''}</p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className={cn(
+                                    "text-[10px] ml-auto",
+                                    m.stock_actuel === 0 ? "bg-red-50 text-red-700 border-red-100" : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                  )}>
+                                    Stock: {m.stock_actuel}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {selectedMed && (
+                          <div className="flex items-center gap-2 px-1">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Stock actuel: {selectedMed.stock_actuel} disp.</span>
+                            {selectedMed.stock_actuel < 50 && <Badge variant="secondary" className="text-[8px] h-3 px-1 bg-amber-100 text-amber-700">Stock Faible</Badge>}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-24 space-y-1">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Quantité</Label>
+                        <Input
+                          type="number"
+                          className="h-10 font-bold"
+                          min={1}
+                          value={l.quantite}
+                          onChange={(e) => { const n = [...lignes]; n[i].quantite = parseInt(e.target.value) || 1; setLignes(n); }}
+                        />
+                      </div>
+
+                      <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive mt-6" onClick={() => setLignes(lignes.filter((_, j) => j !== i))}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -389,10 +584,17 @@ export default function CommandesPage() {
                   <TableBody>
                     {detailLignes.map((l: any) => (
                       <TableRow key={l.id}>
-                        <TableCell className="text-sm">{l.medicaments?.dci} {l.medicaments?.dosage || ''}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded bg-muted border flex items-center justify-center overflow-hidden shrink-0">
+                              <Package className="h-4 w-4 text-muted-foreground/40" />
+                            </div>
+                            <span className="text-sm font-medium">{l.medicaments?.dci} {l.medicaments?.dosage || ''}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-semibold">{l.quantite_demandee}</TableCell>
-                        <TableCell>{l.quantite_approuvee}</TableCell>
-                        <TableCell>{l.quantite_livree}</TableCell>
+                        <TableCell>{l.quantite_approuvee || '—'}</TableCell>
+                        <TableCell>{l.quantite_livree || '—'}</TableCell>
                       </TableRow>
                     ))}
                     {detailLignes.length === 0 && (

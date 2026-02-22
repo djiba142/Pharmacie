@@ -30,7 +30,13 @@ const ThreeWayMatch: React.FC<ThreeWayMatchProps> = ({ items, invoiceId, bcId, b
                     <span className="opacity-70">BR:</span> <span>{brId}</span>
                 </div>
                 <div className="flex items-center space-x-1 px-2 py-1 bg-amber-100 text-amber-800 rounded">
-                    <span className="opacity-70">Facture:</span> <span>{invoiceId}</span>
+                    <span className="opacity-70">Facture:</span>
+                    <div className="flex items-center gap-1">
+                        <span className="font-bold">{invoiceId}</span>
+                        <div className="h-4 w-4 bg-emerald-600 rounded-sm flex items-center justify-center p-0.5">
+                            <div className="h-2 w-2 bg-white rounded-full" />
+                        </div>
+                    </div>
                 </div>
             </div>
 

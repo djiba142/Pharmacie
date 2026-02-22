@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Pill, Plus, Search, Filter, Eye, Edit, ArrowUpDown, Download } from 'lucide-react';
+import { Pill, Plus, Search, Filter, Eye, Edit, ArrowUpDown, Download, Upload, Loader2, X } from 'lucide-react';
 
 const CATEGORIES = ['ESSENTIEL', 'GENERIQUE', 'SPECIALITE', 'VACCIN', 'CONSOMMABLE'];
 const FORMES = ['Comprimé', 'Gélule', 'Sirop', 'Injectable', 'Pommade', 'Suppositoire', 'Collyre', 'Perfusion', 'Poudre', 'Solution'];
@@ -22,6 +22,7 @@ interface MedForm {
   conditionnement: string; classe_therapeutique: string; categorie: string;
   code_national: string; amm_code: string; prix_unitaire_pcg: string; prix_public_indicatif: string;
   necessite_chaine_froid: boolean; temperature_stockage_min: string; temperature_stockage_max: string;
+  image_url?: string;
 }
 
 const emptyForm: MedForm = {
@@ -29,6 +30,7 @@ const emptyForm: MedForm = {
   classe_therapeutique: '', categorie: 'ESSENTIEL', code_national: '', amm_code: '',
   prix_unitaire_pcg: '', prix_public_indicatif: '', necessite_chaine_froid: false,
   temperature_stockage_min: '', temperature_stockage_max: '',
+  image_url: '',
 };
 
 export default function MedicamentsPage() {
@@ -40,13 +42,35 @@ export default function MedicamentsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<MedForm>(emptyForm);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  interface Medicament {
+    id: string;
+    dci: string;
+    nom_commercial?: string;
+    dosage?: string;
+    forme_pharmaceutique?: string;
+    conditionnement?: string;
+    classe_therapeutique?: string;
+    categorie?: string;
+    code_national?: string;
+    amm_code?: string;
+    prix_unitaire_pcg?: number;
+    prix_public_indicatif?: number;
+    necessite_chaine_froid: boolean;
+    temperature_stockage_min?: number;
+    temperature_stockage_max?: number;
+    image_url?: string;
+    is_active: boolean;
+  }
 
   const { data: medicaments = [], isLoading } = useQuery({
     queryKey: ['medicaments'],
     queryFn: async () => {
       const { data, error } = await supabase.from('medicaments').select('*').order('dci');
       if (error) throw error;
-      return data;
+      return (data || []) as Medicament[];
     },
   });
 
@@ -62,6 +86,7 @@ export default function MedicamentsPage() {
         necessite_chaine_froid: form.necessite_chaine_froid,
         temperature_stockage_min: form.temperature_stockage_min ? parseFloat(form.temperature_stockage_min) : null,
         temperature_stockage_max: form.temperature_stockage_max ? parseFloat(form.temperature_stockage_max) : null,
+        image_url: form.image_url || null,
       };
       if (editId) {
         const { error } = await supabase.from('medicaments').update(payload).eq('id', editId);
@@ -76,7 +101,7 @@ export default function MedicamentsPage() {
       setShowForm(false); setEditId(null); setForm(emptyForm);
       toast({ title: editId ? 'Médicament modifié' : 'Médicament ajouté' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   const toggleActiveMutation = useMutation({
@@ -88,10 +113,10 @@ export default function MedicamentsPage() {
       queryClient.invalidateQueries({ queryKey: ['medicaments'] });
       toast({ title: 'Statut mis à jour' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
-  const openEdit = (med: any) => {
+  const openEdit = (med: Medicament) => {
     setEditId(med.id);
     setForm({
       dci: med.dci || '', nom_commercial: med.nom_commercial || '', dosage: med.dosage || '',
@@ -101,17 +126,18 @@ export default function MedicamentsPage() {
       prix_unitaire_pcg: med.prix_unitaire_pcg?.toString() || '', prix_public_indicatif: med.prix_public_indicatif?.toString() || '',
       necessite_chaine_froid: med.necessite_chaine_froid || false,
       temperature_stockage_min: med.temperature_stockage_min?.toString() || '', temperature_stockage_max: med.temperature_stockage_max?.toString() || '',
+      image_url: med.image_url || '',
     });
     setShowForm(true);
   };
 
-  const filtered = medicaments.filter((m: any) => {
+  const filtered = (medicaments as Medicament[]).filter((m) => {
     const matchSearch = `${m.dci} ${m.nom_commercial || ''} ${m.code_national || ''}`.toLowerCase().includes(search.toLowerCase());
     const matchCat = catFilter === 'all' || m.categorie === catFilter;
     return matchSearch && matchCat;
   });
 
-  const detail = medicaments.find((m: any) => m.id === detailId);
+  const detail = (medicaments as Medicament[]).find((m) => m.id === detailId);
 
   if (isLoading) return <div className="space-y-4 animate-fade-in"><Skeleton className="h-8 w-64" /><Skeleton className="h-64 rounded-xl" /></div>;
 
@@ -134,15 +160,15 @@ export default function MedicamentsPage() {
         </CardContent></Card>
         <Card className="stat-card"><CardContent className="p-0">
           <p className="text-xs text-muted-foreground">Actifs</p>
-          <p className="text-2xl font-display font-bold mt-1 text-success">{medicaments.filter((m: any) => m.is_active).length}</p>
+          <p className="text-2xl font-display font-bold mt-1 text-success">{(medicaments as Medicament[]).filter((m) => m.is_active).length}</p>
         </CardContent></Card>
         <Card className="stat-card"><CardContent className="p-0">
           <p className="text-xs text-muted-foreground">Chaîne du froid</p>
-          <p className="text-2xl font-display font-bold mt-1 text-info">{medicaments.filter((m: any) => m.necessite_chaine_froid).length}</p>
+          <p className="text-2xl font-display font-bold mt-1 text-info">{(medicaments as Medicament[]).filter((m) => m.necessite_chaine_froid).length}</p>
         </CardContent></Card>
         <Card className="stat-card"><CardContent className="p-0">
           <p className="text-xs text-muted-foreground">Catégories</p>
-          <p className="text-2xl font-display font-bold mt-1">{new Set(medicaments.map((m: any) => m.categorie).filter(Boolean)).size}</p>
+          <p className="text-2xl font-display font-bold mt-1">{new Set((medicaments as Medicament[]).map((m) => m.categorie).filter(Boolean)).size}</p>
         </CardContent></Card>
       </div>
 
@@ -176,9 +202,20 @@ export default function MedicamentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((m: any) => (
+              {filtered.map((m) => (
                 <TableRow key={m.id} className={!m.is_active ? 'opacity-50' : ''}>
-                  <TableCell className="font-medium">{m.dci}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-slate-50 border flex items-center justify-center overflow-hidden shrink-0">
+                        {m.image_url ? (
+                          <img src={m.image_url} alt={m.dci} className="h-full w-full object-cover" />
+                        ) : (
+                          <Pill className="h-5 w-5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <span className="truncate max-w-[150px]">{m.dci}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{m.nom_commercial || '—'}</TableCell>
                   <TableCell className="text-sm">{m.dosage || '—'}</TableCell>
                   <TableCell className="text-xs">{m.forme_pharmaceutique || '—'}</TableCell>
@@ -209,38 +246,104 @@ export default function MedicamentsPage() {
           <DialogHeader><DialogTitle className="font-display">{editId ? 'Modifier le médicament' : 'Ajouter un médicament'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>DCI *</Label><Input value={form.dci} onChange={e => setForm({...form, dci: e.target.value})} placeholder="Paracétamol" /></div>
-              <div className="space-y-2"><Label>Nom commercial</Label><Input value={form.nom_commercial} onChange={e => setForm({...form, nom_commercial: e.target.value})} placeholder="Doliprane" /></div>
+              <div className="space-y-2"><Label>DCI *</Label><Input value={form.dci} onChange={e => setForm({ ...form, dci: e.target.value })} placeholder="Paracétamol" /></div>
+              <div className="space-y-2"><Label>Nom commercial</Label><Input value={form.nom_commercial} onChange={e => setForm({ ...form, nom_commercial: e.target.value })} placeholder="Doliprane" /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2"><Label>Dosage</Label><Input value={form.dosage} onChange={e => setForm({...form, dosage: e.target.value})} placeholder="500mg" /></div>
+              <div className="space-y-2"><Label>Dosage</Label><Input value={form.dosage} onChange={e => setForm({ ...form, dosage: e.target.value })} placeholder="500mg" /></div>
               <div className="space-y-2"><Label>Forme</Label>
-                <Select value={form.forme_pharmaceutique} onValueChange={v => setForm({...form, forme_pharmaceutique: v})}>
+                <Select value={form.forme_pharmaceutique} onValueChange={v => setForm({ ...form, forme_pharmaceutique: v })}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>{FORMES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Conditionnement</Label><Input value={form.conditionnement} onChange={e => setForm({...form, conditionnement: e.target.value})} placeholder="Boîte de 20" /></div>
+              <div className="space-y-2"><Label>Conditionnement</Label><Input value={form.conditionnement} onChange={e => setForm({ ...form, conditionnement: e.target.value })} placeholder="Boîte de 20" /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2"><Label>Catégorie</Label>
-                <Select value={form.categorie} onValueChange={v => setForm({...form, categorie: v})}>
+                <Select value={form.categorie} onValueChange={v => setForm({ ...form, categorie: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Classe thérapeutique</Label><Input value={form.classe_therapeutique} onChange={e => setForm({...form, classe_therapeutique: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Code AMM</Label><Input value={form.amm_code} onChange={e => setForm({...form, amm_code: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Classe thérapeutique</Label><Input value={form.classe_therapeutique} onChange={e => setForm({ ...form, classe_therapeutique: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Code AMM</Label><Input value={form.amm_code} onChange={e => setForm({ ...form, amm_code: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2"><Label>Code national</Label><Input value={form.code_national} onChange={e => setForm({...form, code_national: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Prix PCG (GNF)</Label><Input type="number" value={form.prix_unitaire_pcg} onChange={e => setForm({...form, prix_unitaire_pcg: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Prix public (GNF)</Label><Input type="number" value={form.prix_public_indicatif} onChange={e => setForm({...form, prix_public_indicatif: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Code national</Label><Input value={form.code_national} onChange={e => setForm({ ...form, code_national: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Prix PCG (GNF)</Label><Input type="number" value={form.prix_unitaire_pcg} onChange={e => setForm({ ...form, prix_unitaire_pcg: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Prix public (GNF)</Label><Input type="number" value={form.prix_public_indicatif} onChange={e => setForm({ ...form, prix_public_indicatif: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-3 gap-3 items-end">
-              <div className="flex items-center gap-2"><Switch checked={form.necessite_chaine_froid} onCheckedChange={v => setForm({...form, necessite_chaine_froid: v})} /><Label>Chaîne du froid</Label></div>
-              <div className="space-y-2"><Label>Temp. min (°C)</Label><Input type="number" value={form.temperature_stockage_min} onChange={e => setForm({...form, temperature_stockage_min: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Temp. max (°C)</Label><Input type="number" value={form.temperature_stockage_max} onChange={e => setForm({...form, temperature_stockage_max: e.target.value})} /></div>
+              <div className="flex items-center gap-2"><Switch checked={form.necessite_chaine_froid} onCheckedChange={v => setForm({ ...form, necessite_chaine_froid: v })} /><Label>Chaîne du froid</Label></div>
+              <div className="space-y-2"><Label>Temp. min (°C)</Label><Input type="number" value={form.temperature_stockage_min} onChange={e => setForm({ ...form, temperature_stockage_min: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Temp. max (°C)</Label><Input type="number" value={form.temperature_stockage_max} onChange={e => setForm({ ...form, temperature_stockage_max: e.target.value })} /></div>
+            </div>
+            <div className="space-y-2">
+              <Label>Image du produit</Label>
+              <div className="flex flex-col gap-3">
+                {form.image_url ? (
+                  <div className="relative w-full h-40 rounded-lg border overflow-hidden group">
+                    <img src={form.image_url} alt="Aperçu" className="w-full h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, image_url: '' })}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-40 rounded-lg border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-slate-50 transition-all"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground/40" />
+                        <p className="text-sm text-muted-foreground">Cliquez pour uploader une photo</p>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    setUploading(true);
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${Math.random().toString(36).slice(2, 10)}.${fileExt}`;
+                      const filePath = `${fileName}`;
+
+                      const { error: uploadError } = await supabase.storage
+                        .from('medications')
+                        .upload(filePath, file);
+
+                      if (uploadError) throw uploadError;
+
+                      const { data: { publicUrl } } = supabase.storage
+                        .from('medications')
+                        .getPublicUrl(filePath);
+
+                      setForm({ ...form, image_url: publicUrl });
+                      toast({ title: 'Image uploadée avec succès' });
+                    } catch (err: unknown) {
+                      const error = err as Error;
+                      toast({ title: 'Erreur d\'upload', description: error.message, variant: 'destructive' });
+                    } finally {
+                      setUploading(false);
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -257,23 +360,30 @@ export default function MedicamentsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle className="font-display">Détail du médicament</DialogTitle></DialogHeader>
           {detail && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-muted-foreground text-xs">DCI</p><p className="font-medium">{detail.dci}</p></div>
-              <div><p className="text-muted-foreground text-xs">Nom commercial</p><p>{detail.nom_commercial || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Dosage</p><p>{detail.dosage || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Forme</p><p>{detail.forme_pharmaceutique || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Catégorie</p><Badge variant="secondary">{detail.categorie || '—'}</Badge></div>
-              <div><p className="text-muted-foreground text-xs">Classe</p><p>{detail.classe_therapeutique || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Code national</p><p className="font-mono">{detail.code_national || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">AMM</p><p className="font-mono">{detail.amm_code || '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Prix PCG</p><p className="font-mono">{detail.prix_unitaire_pcg ? `${detail.prix_unitaire_pcg.toLocaleString()} GNF` : '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Prix public</p><p className="font-mono">{detail.prix_public_indicatif ? `${detail.prix_public_indicatif.toLocaleString()} GNF` : '—'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Chaîne du froid</p><p>{detail.necessite_chaine_froid ? '✅ Oui' : '❌ Non'}</p></div>
-              <div><p className="text-muted-foreground text-xs">Actif</p><p>{detail.is_active ? '✅ Oui' : '❌ Non'}</p></div>
+            <div className="space-y-4">
+              {detail.image_url && (
+                <div className="w-full h-48 rounded-xl border overflow-hidden bg-slate-50 mb-4">
+                  <img src={detail.image_url} alt={detail.dci} className="w-full h-full object-contain" />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><p className="text-muted-foreground text-xs">DCI</p><p className="font-medium">{detail.dci}</p></div>
+                <div><p className="text-muted-foreground text-xs">Nom commercial</p><p>{detail.nom_commercial || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Dosage</p><p>{detail.dosage || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Forme</p><p>{detail.forme_pharmaceutique || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Catégorie</p><Badge variant="secondary">{detail.categorie || '—'}</Badge></div>
+                <div><p className="text-muted-foreground text-xs">Classe</p><p>{detail.classe_therapeutique || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Code national</p><p className="font-mono">{detail.code_national || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">AMM</p><p className="font-mono">{detail.amm_code || '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Prix PCG</p><p className="font-mono">{detail.prix_unitaire_pcg ? `${detail.prix_unitaire_pcg.toLocaleString()} GNF` : '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Prix public</p><p className="font-mono">{detail.prix_public_indicatif ? `${detail.prix_public_indicatif.toLocaleString()} GNF` : '—'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Chaîne du froid</p><p>{detail.necessite_chaine_froid ? '✅ Oui' : '❌ Non'}</p></div>
+                <div><p className="text-muted-foreground text-xs">Actif</p><p>{detail.is_active ? '✅ Oui' : '❌ Non'}</p></div>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

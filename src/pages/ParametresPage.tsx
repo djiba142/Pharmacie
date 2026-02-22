@@ -19,14 +19,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export default function ParametresPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  interface DRS {
+    id: string;
+    nom: string;
+    code: string;
+    region: string;
+    email?: string;
+    telephone?: string;
+    adresse?: string;
+  }
+
+  interface DPS {
+    id: string;
+    nom: string;
+    code: string;
+    prefecture: string;
+    drs_id: string;
+    email?: string;
+    telephone?: string;
+    adresse?: string;
+    drs?: {
+      nom: string;
+    };
+  }
+
+  interface Structure {
+    id: string;
+    nom: string;
+    type: string;
+    code?: string;
+    commune?: string;
+    is_active: boolean;
+  }
+
   const [tab, setTab] = useState('drs');
   const [notifications, setNotifications] = useState(true);
   const [language, setLanguage] = useState('fr');
   const [dateFormat, setDateFormat] = useState('dd/MM/yyyy');
   const [showDrsForm, setShowDrsForm] = useState(false);
   const [showDpsForm, setShowDpsForm] = useState(false);
-  const [editDrs, setEditDrs] = useState<any>(null);
-  const [editDps, setEditDps] = useState<any>(null);
+  const [editDrs, setEditDrs] = useState<DRS | null>(null);
+  const [editDps, setEditDps] = useState<DPS | null>(null);
   const [drsForm, setDrsForm] = useState({ nom: '', code: '', region: '', email: '', telephone: '', adresse: '' });
   const [dpsForm, setDpsForm] = useState({ nom: '', code: '', prefecture: '', drs_id: '', email: '', telephone: '', adresse: '' });
 
@@ -62,7 +95,7 @@ export default function ParametresPage() {
       setDrsForm({ nom: '', code: '', region: '', email: '', telephone: '', adresse: '' });
       toast({ title: editDrs ? 'DRS modifiée' : 'DRS créée' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   const saveDpsMutation = useMutation({
@@ -82,16 +115,16 @@ export default function ParametresPage() {
       setDpsForm({ nom: '', code: '', prefecture: '', drs_id: '', email: '', telephone: '', adresse: '' });
       toast({ title: editDps ? 'DPS modifiée' : 'DPS créée' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
-  const openEditDrs = (drs: any) => {
+  const openEditDrs = (drs: DRS) => {
     setEditDrs(drs);
     setDrsForm({ nom: drs.nom, code: drs.code, region: drs.region, email: drs.email || '', telephone: drs.telephone || '', adresse: drs.adresse || '' });
     setShowDrsForm(true);
   };
 
-  const openEditDps = (dps: any) => {
+  const openEditDps = (dps: DPS) => {
     setEditDps(dps);
     setDpsForm({ nom: dps.nom, code: dps.code, prefecture: dps.prefecture, drs_id: dps.drs_id, email: dps.email || '', telephone: dps.telephone || '', adresse: dps.adresse || '' });
     setShowDpsForm(true);
@@ -221,7 +254,7 @@ export default function ParametresPage() {
                 <TableHead>Email</TableHead><TableHead>Téléphone</TableHead><TableHead className="text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {drsList.map((d: any) => (
+                {(drsList as DRS[]).map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-medium">{d.nom}</TableCell>
                     <TableCell className="font-mono text-sm">{d.code}</TableCell>
@@ -252,7 +285,7 @@ export default function ParametresPage() {
                 <TableHead>DRS</TableHead><TableHead>Téléphone</TableHead><TableHead className="text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {dpsList.map((d: any) => (
+                {(dpsList as DPS[]).map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-medium">{d.nom}</TableCell>
                     <TableCell className="font-mono text-sm">{d.code}</TableCell>
@@ -278,7 +311,7 @@ export default function ParametresPage() {
                 <TableHead>Commune</TableHead><TableHead>Statut</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {structures.map((s: any) => (
+                {(structures as Structure[]).map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.nom}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-xs">{s.type}</Badge></TableCell>
@@ -333,7 +366,7 @@ export default function ParametresPage() {
               <div className="space-y-2"><Label>DRS *</Label>
                 <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={dpsForm.drs_id} onChange={e => setDpsForm({ ...dpsForm, drs_id: e.target.value })}>
                   <option value="">Sélectionner</option>
-                  {drsList.map((d: any) => <option key={d.id} value={d.id}>{d.nom}</option>)}
+                  {(drsList as DRS[]).map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
                 </select>
               </div>
             </div>

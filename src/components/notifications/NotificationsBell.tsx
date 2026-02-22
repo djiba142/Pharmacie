@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Bell, Check, AlertTriangle, ShoppingCart, Package, Info } from 'lucide-react';
+import { Bell, Check, AlertTriangle, ShoppingCart, Package, Info, LucideIcon } from 'lucide-react';
 
-const TYPE_ICONS: Record<string, any> = {
+const TYPE_ICONS: Record<string, LucideIcon> = {
   ALERTE_STOCK: AlertTriangle,
   COMMANDE: ShoppingCart,
   LIVRAISON: Package,
@@ -27,6 +27,16 @@ export function NotificationsBell() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
+  interface Notification {
+    id: string;
+    user_id: string;
+    type: string;
+    titre: string;
+    message: string;
+    lu: boolean;
+    created_at: string;
+  }
+
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications', user?.user_id],
     queryFn: async () => {
@@ -38,7 +48,7 @@ export function NotificationsBell() {
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data;
+      return data as Notification[];
     },
     enabled: !!user?.user_id,
     refetchInterval: 30000,
@@ -76,7 +86,7 @@ export function NotificationsBell() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  const unreadCount = notifications.filter((n: any) => !n.lu).length;
+  const unreadCount = (notifications as Notification[]).filter((n) => !n.lu).length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -103,7 +113,7 @@ export function NotificationsBell() {
           {notifications.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Aucune notification</div>
           ) : (
-            notifications.map((n: any) => {
+            (notifications as Notification[]).map((n) => {
               const Icon = TYPE_ICONS[n.type] || Info;
               const color = TYPE_COLORS[n.type] || 'text-muted-foreground';
               return (

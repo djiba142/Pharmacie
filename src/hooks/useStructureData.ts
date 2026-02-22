@@ -19,9 +19,9 @@ export interface Commande {
     id: string;
     numero_commande: string;
     statut: string;
-    items: any[];
+    items: unknown[];
     created_at: string;
-    entite_origine_id?: string;
+    entite_demandeur_id?: string;
 }
 
 export interface Livraison {
@@ -75,37 +75,46 @@ export function useStructureData() {
             if (structureError) throw new Error(`Erreur structure: ${structureError.message}`);
 
             // 2. Lancer les requêtes liées en parallèle pour la performance
-            const [stocksRes, commandesRes, livraisonsRes] = await Promise.all([
-                // Stocks
-                supabase
-                    .from('stocks')
-                    .select(`
-                        *,
-                        lot:lots (
-                            date_peremption,
-                            medicament:medicaments (
-                                nom_commercial,
-                                dci
-                            )
+
+            const stocksQuery = supabase
+                .from('stocks')
+                .select(`
+                    *,
+                    lot:lots (
+                        date_peremption,
+                        medicament:medicaments (
+                            nom_commercial,
+                            dci
                         )
-                    `)
-                    .eq('entite_id', entityId),
+                    )
+                `)
+                .eq('entite_id', entityId);
 
-                // Commandes (Dernières 10)
-                (supabase
-                    .from('commandes')
-                    .select('*, items:lignes_commande(*)') as any)
-                    .eq('entite_origine_id', entityId)
-                    .order('created_at', { ascending: false })
-                    .limit(10),
+            const commandesQuery = supabase
+                .from('commandes')
+                .select(`
+                    id,
+                    numero_commande,
+                    statut,
+                    created_at,
+                    entite_demandeur_id,
+                    items:lignes_commande(id)
+                `)
+                .eq('entite_demandeur_id', entityId)
+                .order('created_at', { ascending: false })
+                .limit(10) as any;
 
-                // Livraisons (Dernières 10)
-                supabase
-                    .from('livraisons')
-                    .select('*')
-                    .eq('entite_destination_id', entityId)
-                    .order('created_at', { ascending: false })
-                    .limit(10)
+            const livraisonsQuery = supabase
+                .from('livraisons')
+                .select('*')
+                .eq('entite_destination_id', entityId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            const [stocksRes, commandesRes, livraisonsRes] = await Promise.all([
+                stocksQuery,
+                commandesQuery,
+                livraisonsQuery
             ]);
 
             // Gestion des erreurs groupée
@@ -113,8 +122,24 @@ export function useStructureData() {
             if (commandesRes.error) console.warn('Erreur commandes:', commandesRes.error);
             if (livraisonsRes.error) console.warn('Erreur livraisons:', livraisonsRes.error);
 
+            interface StockWithLot {
+                id: string;
+                quantite_actuelle: number;
+                seuil_alerte: number;
+                entite_id: string;
+                created_at: string;
+                derniere_maj?: string;
+                lot?: {
+                    date_peremption: string | null;
+                    medicament?: {
+                        nom_commercial: string;
+                        dci: string;
+                    };
+                };
+            }
+
             // Transformation des données pour correspondre à l'interface Stock
-            const stocks: Stock[] = (stocksRes.data || []).map((item: any) => ({
+            const stocks: Stock[] = (stocksRes.data as unknown as StockWithLot[] || []).map((item) => ({
                 id: item.id,
                 nom: item.lot?.medicament?.nom_commercial || item.lot?.medicament?.dci || 'Médicament inconnu',
                 quantite_actuelle: item.quantite_actuelle,

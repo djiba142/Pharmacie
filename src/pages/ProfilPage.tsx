@@ -41,8 +41,9 @@ export default function ProfilPage() {
       await fetchProfile(user.user_id);
       setEditing(false);
       toast({ title: 'Profil mis à jour' });
-    } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -70,8 +71,9 @@ export default function ProfilPage() {
 
       toast({ title: 'Photo de profil mise à jour' });
       setAvatarPreview(null);
-    } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -89,8 +91,9 @@ export default function ProfilPage() {
       await updateProfileAvatar(user.user_id, '');
       await fetchProfile(user.user_id);
       toast({ title: 'Photo de profil supprimée' });
-    } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {
       setUploadingAvatar(false);
     }

@@ -52,6 +52,43 @@ export default function PharmacovigilancePage() {
   const [selectedEI, setSelectedEI] = useState<string | null>(null);
   const [tab, setTab] = useState('declarations');
 
+  interface DeclarationEI {
+    id: string;
+    numero: string;
+    statut: string;
+    gravite: string;
+    patient_initiales?: string;
+    patient_age?: number;
+    patient_sexe: string;
+    medicament_id?: string;
+    lot_id?: string;
+    description_ei: string;
+    date_survenue?: string;
+    actions_prises?: string;
+    evolution?: string;
+    commentaire_evaluateur?: string;
+    medicaments?: {
+      dci: string;
+      dosage?: string;
+    };
+  }
+
+  interface RappelLot {
+    id: string;
+    lot_id: string;
+    motif: string;
+    niveau: string;
+    statut: string;
+    instructions?: string;
+    date_rappel: string;
+    lots?: {
+      numero_lot: string;
+      medicaments?: {
+        dci: string;
+      };
+    };
+  }
+
   // EI form
   const [eiForm, setEiForm] = useState({
     patient_initiales: '', patient_age: '', patient_sexe: 'M',
@@ -68,7 +105,7 @@ export default function PharmacovigilancePage() {
     queryFn: async () => {
       const { data, error } = await supabase.from('declarations_ei').select('*, medicaments(dci, dosage)').order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return data as DeclarationEI[];
     },
   });
 
@@ -78,7 +115,7 @@ export default function PharmacovigilancePage() {
     queryFn: async () => {
       const { data, error } = await supabase.from('rappels_lots').select('*, lots(numero_lot, medicaments(dci))').order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return data as RappelLot[];
     },
   });
 
@@ -127,7 +164,7 @@ export default function PharmacovigilancePage() {
       setEiForm({ patient_initiales: '', patient_age: '', patient_sexe: 'M', medicament_id: '', lot_id: '', description_ei: '', date_survenue: '', gravite: 'NON_GRAVE', actions_prises: '', evolution: '' });
       toast({ title: 'Déclaration créée', description: 'L\'effet indésirable a été enregistré.' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   // Create rappel
@@ -149,38 +186,38 @@ export default function PharmacovigilancePage() {
       setRappelForm({ lot_id: '', motif: '', niveau: 'CLASSE_III', instructions: '' });
       toast({ title: 'Rappel initié', description: 'Le rappel de lot a été enregistré.' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
   // Update EI status
   const updateEIMutation = useMutation({
     mutationFn: async ({ id, statut, commentaire }: { id: string; statut: string; commentaire?: string }) => {
       const { data: session } = await supabase.auth.getSession();
-      const updates: any = { statut };
+      const updates: Partial<DeclarationEI> & { evaluated_by?: string } = { statut };
       if (commentaire) updates.commentaire_evaluateur = commentaire;
       if (['EN_EVALUATION', 'CONFIRMEE', 'ESCALADEE'].includes(statut)) updates.evaluated_by = session.session?.user.id;
-      const { error } = await supabase.from('declarations_ei').update(updates).eq('id', id);
+      const { error } = await supabase.from('declarations_ei').update(updates as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['declarations-ei'] });
       toast({ title: 'Statut mis à jour' });
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
-  const filteredDeclarations = declarations.filter((d: any) =>
+  const filteredDeclarations = (declarations as DeclarationEI[]).filter((d) =>
     d.numero.toLowerCase().includes(search.toLowerCase()) || d.description_ei?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const detailEI = declarations.find((d: any) => d.id === selectedEI);
+  const detailEI = (declarations as DeclarationEI[]).find((d) => d.id === selectedEI);
   const isLoading = loadingEI || loadingRappels;
 
   const eiCounts = {
-    total: declarations.length,
-    nouvelles: declarations.filter((d: any) => d.statut === 'NOUVELLE').length,
-    graves: declarations.filter((d: any) => ['GRAVE', 'DECES', 'HOSPITALISATION'].includes(d.gravite)).length,
-    rappels: rappels.length,
+    total: (declarations as DeclarationEI[]).length,
+    nouvelles: (declarations as DeclarationEI[]).filter((d) => d.statut === 'NOUVELLE').length,
+    graves: (declarations as DeclarationEI[]).filter((d) => ['GRAVE', 'DECES', 'HOSPITALISATION'].includes(d.gravite)).length,
+    rappels: (rappels as RappelLot[]).length,
   };
 
   if (isLoading) {
@@ -262,7 +299,7 @@ export default function PharmacovigilancePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDeclarations.map((d: any) => (
+                  {filteredDeclarations.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="font-mono text-sm font-medium">{d.numero}</TableCell>
                       <TableCell><Badge variant="outline" className={STATUTS_EI[d.statut as keyof typeof STATUTS_EI]?.className}>{STATUTS_EI[d.statut as keyof typeof STATUTS_EI]?.label}</Badge></TableCell>
@@ -299,7 +336,7 @@ export default function PharmacovigilancePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rappels.map((r: any) => (
+                  {(rappels as RappelLot[]).map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-sm">{r.lots?.numero_lot}</TableCell>
                       <TableCell className="text-sm">{r.lots?.medicaments?.dci || '—'}</TableCell>
@@ -338,7 +375,7 @@ export default function PharmacovigilancePage() {
               <div className="space-y-2"><Label>Médicament suspect</Label>
                 <Select value={eiForm.medicament_id} onValueChange={(v) => setEiForm({ ...eiForm, medicament_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                  <SelectContent>{medicaments.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.dci} {m.dosage || ''}</SelectItem>)}</SelectContent>
+                  <SelectContent>{medicaments.map((m) => <SelectItem key={m.id} value={m.id}>{m.dci} {m.dosage || ''}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2"><Label>Lot concerné</Label>

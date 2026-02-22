@@ -246,8 +246,9 @@ export default function DemandeInscriptionPage() {
       setNumeroSuivi(numero);
       setSubmitted(true);
       toast({ title: 'Demande soumise', description: `Numéro de suivi: ${numero}` });
-    } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }

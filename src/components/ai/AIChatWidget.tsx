@@ -53,7 +53,7 @@ export function AIChatWidget() {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                setMessages(parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
+                setMessages(parsed.map((m: AIMessage) => ({ ...m, timestamp: new Date(m.timestamp) })));
             } catch (e) {
                 // Fallback: Initialize with welcome message on parse error
                 setMessages([{
@@ -72,7 +72,7 @@ export function AIChatWidget() {
                 timestamp: new Date()
             }]);
         }
-    }, []);
+    }, [WELCOME_MESSAGE]);
 
     // Nettoyer au logout
     useEffect(() => {

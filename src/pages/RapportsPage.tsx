@@ -12,8 +12,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area,
 } from 'recharts';
-import { BarChart3, Download, FileText, TrendingUp, Package, AlertTriangle, Truck } from 'lucide-react';
+import { BarChart3, Download, FileText, TrendingUp, Package, AlertTriangle, Truck, FileSpreadsheet, Building2, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import logoLivramed from '@/assets/logo-livramed.png';
+import logoGuinee from '@/assets/partners/guinee.png';
+import logoPCG from '@/assets/partners/pcg.jpg';
+import * as XLSX from 'xlsx';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const PIE_COLORS = ['hsl(174, 55%, 38%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)', 'hsl(210, 80%, 52%)', 'hsl(152, 60%, 42%)'];
 
@@ -21,13 +26,48 @@ export default function RapportsPage() {
   const { toast } = useToast();
   const { level, entityId } = useUserLevel();
   const [period, setPeriod] = useState('month');
+  interface StockRecord {
+    id: string;
+    quantite_actuelle: number;
+    seuil_minimal: number;
+    seuil_alerte: number;
+    lots?: {
+      date_peremption: string;
+      numero_lot: string;
+      medicaments?: {
+        dci: string;
+        nom_commercial?: string;
+        categorie?: string;
+      }
+    };
+  }
+
+  interface CommandeRecord {
+    id: string;
+    statut: string;
+    date_commande: string;
+  }
+
+  interface LivraisonRecord {
+    id: string;
+    statut: string;
+  }
+
+  interface DeclarationRecord {
+    id: string;
+    numero: string;
+    statut: string;
+    gravite: string;
+    description_ei?: string;
+  }
+
   const [tab, setTab] = useState('stocks');
 
   const { data: stocks = [], isLoading: loadingStocks } = useQuery({
     queryKey: ['rapport-stocks', level, entityId],
     queryFn: async () => {
       const { data } = await supabase.from('stocks').select('*, lots!inner(*, medicaments!inner(*))');
-      return data || [];
+      return (data || []) as StockRecord[];
     },
   });
 
@@ -35,7 +75,7 @@ export default function RapportsPage() {
     queryKey: ['rapport-commandes'],
     queryFn: async () => {
       const { data } = await supabase.from('commandes').select('*').order('created_at', { ascending: false });
-      return data || [];
+      return (data || []) as CommandeRecord[];
     },
   });
 
@@ -43,7 +83,7 @@ export default function RapportsPage() {
     queryKey: ['rapport-livraisons'],
     queryFn: async () => {
       const { data } = await supabase.from('livraisons').select('*').order('created_at', { ascending: false });
-      return data || [];
+      return (data || []) as LivraisonRecord[];
     },
   });
 
@@ -51,7 +91,7 @@ export default function RapportsPage() {
     queryKey: ['rapport-ei'],
     queryFn: async () => {
       const { data } = await supabase.from('declarations_ei').select('*');
-      return data || [];
+      return (data || []) as DeclarationRecord[];
     },
   });
 
@@ -64,7 +104,7 @@ export default function RapportsPage() {
   });
 
   // Stock stats by category
-  const stockByCategorie = stocks.reduce((acc: any, s: any) => {
+  const stockByCategorie = (stocks as StockRecord[]).reduce((acc: Record<string, number>, s) => {
     const cat = s.lots?.medicaments?.categorie || 'Autre';
     acc[cat] = (acc[cat] || 0) + s.quantite_actuelle;
     return acc;
@@ -74,8 +114,8 @@ export default function RapportsPage() {
   // Stock status distribution
   const stockStatusData = (() => {
     let ok = 0, alerte = 0, critique = 0, perime = 0;
-    stocks.forEach((s: any) => {
-      const exp = new Date(s.lots?.date_peremption);
+    (stocks as StockRecord[]).forEach((s) => {
+      const exp = new Date(s.lots?.date_peremption || '');
       if (exp < new Date()) perime++;
       else if (s.quantite_actuelle <= s.seuil_minimal) critique++;
       else if (s.quantite_actuelle <= s.seuil_alerte) alerte++;
@@ -85,11 +125,11 @@ export default function RapportsPage() {
   })();
 
   // Commandes by status
-  const cmdByStatus = commandes.reduce((acc: any, c: any) => { acc[c.statut] = (acc[c.statut] || 0) + 1; return acc; }, {});
+  const cmdByStatus = (commandes as CommandeRecord[]).reduce((acc: Record<string, number>, c) => { acc[c.statut] = (acc[c.statut] || 0) + 1; return acc; }, {});
   const cmdStatusData = Object.entries(cmdByStatus).map(([name, value]) => ({ name, value }));
 
   // Commandes by month
-  const cmdByMonth = commandes.reduce((acc: any, c: any) => {
+  const cmdByMonth = (commandes as CommandeRecord[]).reduce((acc: Record<string, number>, c) => {
     const m = new Date(c.date_commande).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
     acc[m] = (acc[m] || 0) + 1;
     return acc;
@@ -97,72 +137,213 @@ export default function RapportsPage() {
   const cmdMonthData = Object.entries(cmdByMonth).map(([mois, total]) => ({ mois, total })).reverse().slice(0, 12);
 
   // Livraisons by status
-  const livByStatus = livraisons.reduce((acc: any, l: any) => { acc[l.statut] = (acc[l.statut] || 0) + 1; return acc; }, {});
+  const livByStatus = (livraisons as LivraisonRecord[]).reduce((acc: Record<string, number>, l) => { acc[l.statut] = (acc[l.statut] || 0) + 1; return acc; }, {});
   const livStatusData = Object.entries(livByStatus).map(([name, value]) => ({ name, value }));
 
   const generatePDF = async () => {
     try {
+      console.log("Starting PDF generation...");
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
       const doc = new jsPDF();
 
-      doc.setFontSize(18);
-      doc.text('Rapport LivraMed', 14, 22);
+      // --- Header Design (Institutional Color) ---
+      doc.setFillColor(15, 23, 42); // Slate 900 (PCG Dark Blue/Slate)
+      doc.rect(0, 0, 210, 45, 'F');
+
+      // Accent Emerald Line
+      doc.setFillColor(16, 185, 129); // Emerald 500
+      doc.rect(0, 45, 210, 1.5, 'F');
+
+      // --- Logo Integration (Defensive) ---
+      const drawImageSafe = (id: string, format: string, x: number, y: number, w: number, h: number) => {
+        const img = document.getElementById(id) as HTMLImageElement;
+        if (img && img.naturalWidth > 0) {
+          try {
+            doc.addImage(img, format, x, y, w, h);
+          } catch (e) {
+            console.warn(`Failed to add image ${id}`, e);
+          }
+        }
+      };
+
+      drawImageSafe('guinee-logo', 'PNG', 14, 8, 15, 15);
+      drawImageSafe('pcg-logo', 'JPEG', 160, 8, 15, 15);
+      drawImageSafe('app-logo-rendering', 'PNG', 185, 10, 10, 10);
+
+      // Title & Institutional Info
+      // Title & Institutional Info
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RÉPUBLIQUE DE GUINÉE', 36, 14);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Travail — Justice — Solidarité', 36, 18);
+
       doc.setFontSize(10);
-      doc.text(`${LEVEL_LABELS[level]} — ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 30);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PHARMACIE CENTRALE DE GUINÉE (PCG) SA', 36, 26);
 
-      doc.setFontSize(14);
-      doc.text('Résumé des Stocks', 14, 45);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(200, 200, 200);
+      doc.text('MINISTÈRE DE LA SANTÉ ET DE L\'HYGIÈNE PUBLIQUE', 36, 31);
+
+      // --- Report Meta ---
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(6);
+      doc.text(`RÉF: LVM-REP-${new Date().getTime().toString().slice(-8)}`, 180, 28, { align: 'right' });
+      doc.text(`DATE: ${new Date().toLocaleDateString('fr-FR')}`, 180, 31, { align: 'right' });
+
+      // --- Body Section (Title Higher & Larger) ---
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RAPPORT DE SITUATION PHARMACEUTIQUE', 14, 55);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Période : ${period === 'month' ? 'Mensuel' : 'Annuel'} — État au ${new Date().toLocaleString('fr-FR')}`, 14, 62);
+
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(1.5);
+      doc.line(14, 65, 85, 65);
+
+      // Space for text and tables...
+
+      // --- KPI Summary (Professional Grid) ---
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RÉSUMÉ DES INDICATEURS CLÉS (KPI)', 14, 78);
+
       autoTable(doc, {
-        startY: 50,
-        head: [['Indicateur', 'Valeur']],
+        startY: 83,
+        head: [['Indicateur de Performance', 'Valeur Actuelle', 'Évaluation du Statut']],
         body: [
-          ['Total entrées stock', stocks.length.toString()],
-          ['Stocks en alerte', stockStatusData.find(d => d.name === 'Alerte')?.value?.toString() || '0'],
-          ['Stocks critiques', stockStatusData.find(d => d.name === 'Critique')?.value?.toString() || '0'],
-          ['Lots périmés', stockStatusData.find(d => d.name === 'Périmé')?.value?.toString() || '0'],
+          ['Total des produits en inventaire', stocks.length.toString(), 'CONFORME'],
+          ['Alerte Stock (Seuil minimal atteint)', stockStatusData.find(d => d.name === 'Alerte')?.value?.toString() || '0', 'À SURVEILLER'],
+          ['Ruptures Critiques / Stock Zéro', stockStatusData.find(d => d.name === 'Critique')?.value?.toString() || '0', 'ACTION REQUISE'],
+          ['Produits Périmés identifiés', stockStatusData.find(d => d.name === 'Périmé')?.value?.toString() || '0', 'URGENT'],
+          ['Volume de Commandes traitées', commandes.length.toString(), 'ACTIF'],
+          ['Livraisons validées sur la période', livraisons.length.toString(), 'LIVRÉ'],
         ],
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42], fontSize: 10, halign: 'left', fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 6, font: 'helvetica' },
+        columnStyles: {
+          1: { halign: 'center', fontStyle: 'bold', textColor: [15, 23, 42] },
+          2: { halign: 'center', fontStyle: 'bold' }
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 2) {
+            const val = data.cell.text[0];
+            if (val === 'CONFORME' || val === 'LIVRÉ' || val === 'ACTIF') data.cell.styles.textColor = [16, 185, 129];
+            if (val === 'À SURVEILLER') data.cell.styles.textColor = [245, 158, 11];
+            if (val === 'ACTION REQUISE' || val === 'URGENT') data.cell.styles.textColor = [220, 38, 38];
+          }
+        }
       });
 
-      const y1 = (doc as any).lastAutoTable?.finalY || 80;
-      doc.setFontSize(14);
-      doc.text('Commandes', 14, y1 + 15);
-      autoTable(doc, {
-        startY: y1 + 20,
-        head: [['Statut', 'Nombre']],
-        body: cmdStatusData.map(d => [d.name, (d.value as number).toString()]),
-      });
+      // --- Low Stocks (Compact) ---
+      const lowStocks = [...(stocks as StockRecord[])]
+        .sort((a, b) => a.quantite_actuelle - b.quantite_actuelle)
+        .slice(0, 5);
 
-      const y2 = (doc as any).lastAutoTable?.finalY || 120;
-      doc.setFontSize(14);
-      doc.text('Livraisons', 14, y2 + 15);
-      autoTable(doc, {
-        startY: y2 + 20,
-        head: [['Statut', 'Nombre']],
-        body: livStatusData.map(d => [d.name, (d.value as number).toString()]),
-      });
+      if (lowStocks.length > 0) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ALERTES PRODUITS (TOP 5 PRIORITÉS)', 14, (doc as any).lastAutoTable.finalY + 12);
 
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text('Top 20 Stocks les plus bas', 14, 22);
-      const lowStocks = [...stocks]
-        .sort((a: any, b: any) => a.quantite_actuelle - b.quantite_actuelle)
-        .slice(0, 20);
-      autoTable(doc, {
-        startY: 28,
-        head: [['Médicament', 'Quantité', 'Seuil alerte', 'Péremption']],
-        body: lowStocks.map((s: any) => [
-          s.lots?.medicaments?.dci || 'N/A',
-          s.quantite_actuelle.toString(),
-          s.seuil_alerte.toString(),
-          s.lots?.date_peremption ? new Date(s.lots.date_peremption).toLocaleDateString('fr-FR') : '—',
-        ]),
-      });
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 16,
+          head: [['Produit', 'Stock', 'Seuil', 'Péremption']],
+          body: lowStocks.map((s) => [
+            s.lots?.medicaments?.dci || 'N/A',
+            s.quantite_actuelle.toString(),
+            s.seuil_minimal.toString(),
+            s.lots?.date_peremption ? new Date(s.lots.date_peremption).toLocaleDateString('fr-FR') : 'N/A'
+          ]),
+          theme: 'plain',
+          headStyles: { fontStyle: 'bold', textColor: [220, 38, 38] },
+          styles: { fontSize: 8, cellPadding: 2 }
+        });
+      }
 
-      doc.save(`rapport-livramed-${new Date().toISOString().slice(0, 10)}.pdf`);
-      toast({ title: 'PDF téléchargé', description: 'Le rapport a été généré avec succès.' });
+
+      // --- Footer (QR Code relocated here) ---
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+
+        // QR Code Relocation with deep safety check
+        try {
+          const qrCanvas = document.getElementById('report-qr') as HTMLCanvasElement;
+          if (qrCanvas && typeof qrCanvas.toDataURL === 'function') {
+            const qrData = qrCanvas.toDataURL('image/png');
+            doc.addImage(qrData, 'PNG', 182, 275, 15, 15);
+            doc.setFontSize(5);
+            doc.setTextColor(180, 180, 180);
+            doc.text('VÉRIFICATION SÉCURISÉE', 190, 292, { align: 'right' });
+          }
+        } catch (qrErr) {
+          console.warn("QR Addition failed", qrErr);
+        }
+
+        doc.setFontSize(6);
+        doc.setTextColor(180, 180, 180);
+        doc.text(`Officiel LivraMed Alpha v2.5 — État au ${new Date().toLocaleDateString('fr-FR')} — Page ${i}/${pageCount}`, 14, 285);
+      }
+
+      console.log("Saving PDF...");
+      doc.save(`rapport-professionnel-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast({ title: 'Rapport généré', description: 'Le document PDF professionnel est prêt.' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("PDF Error:", error);
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const generateExcel = () => {
+    try {
+      const stockData = (stocks as StockRecord[]).map((s) => ({
+        'Code': s.id,
+        'Médicament': s.lots?.medicaments?.nom_commercial || s.lots?.medicaments?.dci,
+        'DCI': s.lots?.medicaments?.dci,
+        'Catégorie': s.lots?.medicaments?.categorie,
+        'Quantité': s.quantite_actuelle,
+        'Seuil Alerte': s.seuil_alerte,
+        'N° Lot': s.lots?.numero_lot,
+        'Date Péremption': s.lots?.date_peremption ? new Date(s.lots.date_peremption).toLocaleDateString('fr-FR') : 'N/A',
+        'Statut': s.quantite_actuelle <= s.seuil_alerte ? (s.quantite_actuelle <= s.seuil_minimal ? 'CRITIQUE' : 'ALERTE') : 'OK'
+      }));
+
+      const wb = XLSX.utils.book_new();
+
+      // Header Info Sheet
+      const infoWs = XLSX.utils.aoa_to_sheet([
+        ['SYSTÈME LIVRAMED - RAPPORT NATIONAL'],
+        ['Entité:', LEVEL_LABELS[level]],
+        ['Date Export:', new Date().toLocaleString('fr-FR')],
+        [''],
+        ['RÉSUMÉ'],
+        ['Total Articles:', stocks.length],
+        ['Commandes Total:', commandes.length],
+        ['Livraisons Total:', livraisons.length]
+      ]);
+      XLSX.utils.book_append_sheet(wb, infoWs, 'Résumé');
+
+      const ws = XLSX.utils.json_to_sheet(stockData);
+      XLSX.utils.book_append_sheet(wb, ws, 'Détail des Stocks');
+
+      XLSX.writeFile(wb, `export-livramed-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: 'Excel téléchargé', description: 'Les données ont été exportées avec succès.' });
     } catch (err: any) {
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+      toast({ title: 'Erreur Excel', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -170,13 +351,28 @@ export default function RapportsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Rapports & Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">{LEVEL_LABELS[level]} — Données en temps réel</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center p-2 border border-primary/20">
+            <img src={logoLivramed} alt="Logo" className="h-8 w-8 object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-bold text-foreground">Rapports & Analytics</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold uppercase tracking-wider">
+                <ShieldCheck className="h-3 w-3 mr-1" /> {LEVEL_LABELS[level]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">— Données en temps réel</span>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={generatePDF}><Download className="h-4 w-4 mr-2" /> Télécharger PDF</Button>
+          <Button variant="outline" onClick={generateExcel} className="hidden sm:flex border-emerald-600 text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm">
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Exporter Excel
+          </Button>
+          <Button onClick={generatePDF} className="bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+            <FileText className="h-4 w-4 mr-2" /> Rapport PDF Complet
+          </Button>
         </div>
       </div>
 
@@ -237,7 +433,7 @@ export default function RapportsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stockCatData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(170,15%,89%)" />
                       <XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip />
-                      <Bar dataKey="value" name="Quantité" fill="hsl(174,55%,38%)" radius={[4,4,0,0]} />
+                      <Bar dataKey="value" name="Quantité" fill="hsl(174,55%,38%)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -284,7 +480,7 @@ export default function RapportsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={livStatusData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(170,15%,89%)" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip />
-                    <Bar dataKey="value" name="Nombre" fill="hsl(210,80%,52%)" radius={[4,4,0,0]} />
+                    <Bar dataKey="value" name="Nombre" fill="hsl(210,80%,52%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -299,7 +495,7 @@ export default function RapportsPage() {
               <CardContent>
                 <div className="h-64">
                   {(() => {
-                    const byGravite = declarations.reduce((acc: any, d: any) => { acc[d.gravite] = (acc[d.gravite] || 0) + 1; return acc; }, {});
+                    const byGravite = (declarations as DeclarationRecord[]).reduce((acc: Record<string, number>, d) => { acc[d.gravite] = (acc[d.gravite] || 0) + 1; return acc; }, {});
                     const data = Object.entries(byGravite).map(([name, value]) => ({ name, value }));
                     return (
                       <ResponsiveContainer width="100%" height="100%">
@@ -317,13 +513,13 @@ export default function RapportsPage() {
               <CardContent>
                 <div className="h-64">
                   {(() => {
-                    const byStatut = declarations.reduce((acc: any, d: any) => { acc[d.statut] = (acc[d.statut] || 0) + 1; return acc; }, {});
+                    const byStatut = (declarations as DeclarationRecord[]).reduce((acc: Record<string, number>, d) => { acc[d.statut] = (acc[d.statut] || 0) + 1; return acc; }, {});
                     const data = Object.entries(byStatut).map(([name, value]) => ({ name, value }));
                     return (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="hsl(170,15%,89%)" />
                           <XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip />
-                          <Bar dataKey="value" name="Nombre" fill="hsl(0,72%,51%)" radius={[4,4,0,0]} />
+                          <Bar dataKey="value" name="Nombre" fill="hsl(0,72%,51%)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     );
@@ -334,6 +530,13 @@ export default function RapportsPage() {
           </div>
         </TabsContent>
       </Tabs>
+      {/* Logos for PDF Rendering */}
+      <div className="hidden">
+        <img id="guinee-logo" src={logoGuinee} alt="Guinea Logo" />
+        <img id="pcg-logo" src={logoPCG} alt="PCG Logo" />
+        <img id="app-logo-rendering" src={logoLivramed} alt="LivraMed Logo" />
+        <QRCodeCanvas id="report-qr" value={`LivraMed-Report-${entityId}-${new Date().getTime()}`} size={128} />
+      </div>
     </div>
   );
 }

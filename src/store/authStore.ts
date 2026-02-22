@@ -13,6 +13,7 @@ export interface UserProfile {
   entity_id?: string;
   entity_type?: string;
   is_active: boolean;
+  status?: 'ACTIF' | 'SUSPENDU' | 'SUPPRIME';
   avatar_url?: string;
   role?: string;
 }
@@ -95,6 +96,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         loading: false,
       });
+
+      // Synchroniser les cookies au chargement du profil
+      await cookieService.syncOnLogin(userId);
     } catch (err) {
       console.error('Unexpected error in fetchProfile:', err);
       set({ user: null, isAuthenticated: false, loading: false });

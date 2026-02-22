@@ -59,7 +59,7 @@ export function useAuditLogs(filter?: AuditFilter) {
             try {
                 // Build query with filters
                 let query = supabase
-                    .from('audit_logs' as any) // Cast to any until types are regenerated
+                    .from('audit_logs' as never)
                     .select('*')
                     .order('created_at', { ascending: false });
 
@@ -88,20 +88,20 @@ export function useAuditLogs(filter?: AuditFilter) {
                     setLogs(generateMockLogs());
                 } else {
                     // Map real logs to our AuditLog interface
-                    const mappedLogs: AuditLog[] = (realLogs || []).map((log: any) => ({
-                        id: log.id,
-                        timestamp: log.created_at,
-                        user_id: log.user_id,
-                        user_name: log.user_name || log.user_email || 'Utilisateur Inconnu',
-                        user_role: log.user_role || 'N/A',
-                        user_email: log.user_email || '',
-                        ip_address: log.ip_address || 'N/A',
-                        user_agent: log.user_agent || 'N/A',
-                        action: log.action,
-                        entity_type: log.entity_type,
-                        entity_id: log.entity_id || '',
-                        changes: log.details?.changes,
-                        metadata: log.details,
+                    const mappedLogs: AuditLog[] = (realLogs || []).map((log: Record<string, unknown>) => ({
+                        id: String(log.id),
+                        timestamp: String(log.created_at || ''),
+                        user_id: String(log.user_id || ''),
+                        user_name: String(log.user_name || log.user_email || 'Utilisateur Inconnu'),
+                        user_role: String(log.user_role || 'N/A'),
+                        user_email: String(log.user_email || ''),
+                        ip_address: String(log.ip_address || 'N/A'),
+                        user_agent: String(log.user_agent || 'N/A'),
+                        action: String(log.action || ''),
+                        entity_type: String(log.entity_type || ''),
+                        entity_id: String(log.entity_id || ''),
+                        changes: (log.details as Record<string, unknown>)?.changes as AuditLog['changes'],
+                        metadata: log.details as AuditLog['metadata'],
                         status: 'SUCCESS' as const, // Default, can be enhanced later
                         error_message: null
                     }));
@@ -146,22 +146,23 @@ export function useAuditLogs(filter?: AuditFilter) {
             .channel('audit_logs_changes')
             .on('postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'audit_logs' },
-                (payload) => {
+                (payload: { new: Record<string, unknown> }) => {
                     // Optimistically add new log to the beginning of the list
+                    const log = payload.new;
                     const newLog: AuditLog = {
-                        id: payload.new.id,
-                        timestamp: payload.new.created_at,
-                        user_id: payload.new.user_id,
-                        user_name: payload.new.user_name || payload.new.user_email || 'Utilisateur Inconnu',
-                        user_role: payload.new.user_role || 'N/A',
-                        user_email: payload.new.user_email || '',
-                        ip_address: payload.new.ip_address || 'N/A',
-                        user_agent: payload.new.user_agent || 'N/A',
-                        action: payload.new.action,
-                        entity_type: payload.new.entity_type,
-                        entity_id: payload.new.entity_id || '',
-                        changes: payload.new.details?.changes,
-                        metadata: payload.new.details,
+                        id: String(log.id),
+                        timestamp: String(log.created_at || ''),
+                        user_id: String(log.user_id || ''),
+                        user_name: String(log.user_name || log.user_email || 'Utilisateur Inconnu'),
+                        user_role: String(log.user_role || 'N/A'),
+                        user_email: String(log.user_email || ''),
+                        ip_address: String(log.ip_address || 'N/A'),
+                        user_agent: String(log.user_agent || 'N/A'),
+                        action: String(log.action || ''),
+                        entity_type: String(log.entity_type || ''),
+                        entity_id: String(log.entity_id || ''),
+                        changes: (log.details as Record<string, unknown>)?.changes as AuditLog['changes'],
+                        metadata: log.details as AuditLog['metadata'],
                         status: 'SUCCESS' as const,
                         error_message: null
                     };
@@ -175,7 +176,15 @@ export function useAuditLogs(filter?: AuditFilter) {
             supabase.removeChannel(channel);
         };
 
-    }, [JSON.stringify(filter)]);
+    }, [
+        filter?.userId,
+        filter?.action,
+        filter?.entityType,
+        filter?.startDate,
+        filter?.endDate,
+        filter?.search,
+        filter?.status
+    ]);
 
     return { logs, isLoading };
 }

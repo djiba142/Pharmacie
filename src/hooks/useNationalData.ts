@@ -49,6 +49,15 @@ export interface RegionPerformance {
     commandes: number;
 }
 
+export interface CriticalStockAlert {
+    id: string;
+    medicament: string;
+    entite_nom: string;
+    quantite: number;
+    seuil_minimal: number;
+    region: string;
+}
+
 export interface NationalDataResult {
     stats: DashboardStats;
     stocks: Stock[];
@@ -56,6 +65,24 @@ export interface NationalDataResult {
     livraisons: Livraison[];
     drs: DRS[];
     regionPerformance: RegionPerformance[];
+    criticalStockAlerts: CriticalStockAlert[];
+}
+
+interface StockWithLot {
+    id: string;
+    quantite_actuelle: number;
+    seuil_alerte: number;
+    seuil_minimal?: number;
+    entite_id: string;
+    entite_type?: string;
+    prix_unitaire?: number;
+    lot?: {
+        date_peremption: string | null;
+        medicament?: {
+            nom_commercial: string;
+            dci: string;
+        };
+    };
 }
 
 export function useNationalData() {
@@ -65,7 +92,7 @@ export function useNationalData() {
         queryKey: ['national-dashboard', user?.id],
         queryFn: async () => {
             // Récupérer toutes les données nationales en parallèle
-            const [stocksRes, commandesRes, livraisonsRes, drsRes] = await Promise.all([
+            const [stocksRes, commandesRes, livraisonsRes, drsRes, dpsRes, structuresRes, profilesCountRes] = await Promise.all([
                 supabase.from('stocks').select(`
                     *,
                     lot:lots (
@@ -76,9 +103,12 @@ export function useNationalData() {
                         )
                     )
                 `),
-                supabase.from('commandes').select('*') as any,
-                supabase.from('livraisons').select('*') as any,
-                supabase.from('drs').select('*') as any
+                supabase.from('commandes').select('*'),
+                supabase.from('livraisons').select('*'),
+                supabase.from('drs').select('*'),
+                supabase.from('dps').select('id, drs_id'),
+                supabase.from('structures').select('id, dps_id'),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_active', true)
             ]);
 
             // Gestion des erreurs
@@ -87,7 +117,8 @@ export function useNationalData() {
             if (livraisonsRes.error) throw new Error(`Erreur livraisons: ${livraisonsRes.error.message}`);
             if (drsRes.error) throw new Error(`Erreur DRS: ${drsRes.error.message}`);
 
-            const stocks: Stock[] = (stocksRes.data || []).map((item: any) => ({
+            const stocksRaw = (stocksRes.data as unknown as StockWithLot[]) || [];
+            const stocks: Stock[] = stocksRaw.map((item) => ({
                 id: item.id,
                 nom: item.lot?.medicament?.nom_commercial || item.lot?.medicament?.dci || 'Médicament inconnu',
                 quantite_actuelle: item.quantite_actuelle,
@@ -96,9 +127,29 @@ export function useNationalData() {
                 entite_id: item.entite_id,
                 prix_unitaire: item.prix_unitaire
             }));
-            const commandes = (commandesRes.data as Commande[]) || [];
-            const livraisons = (livraisonsRes.data as Livraison[]) || [];
-            const drs = (drsRes.data as DRS[]) || [];
+            const commandes = (commandesRes.data as unknown as Commande[]) || [];
+            const livraisons = (livraisonsRes.data as unknown as Livraison[]) || [];
+            const drs = (drsRes.data as unknown as DRS[]) || [];
+            const dpsMapping = (dpsRes.data || []) as unknown as { id: string, drs_id: string }[];
+            const structureMapping = (structuresRes.data || []) as unknown as { id: string, dps_id: string }[];
+
+            // Construire une map entite_id -> drs_id
+            const entityToDrsMap: Record<string, string> = {};
+
+            // 1. Les DRS eux-mêmes
+            drs.forEach(d => { entityToDrsMap[d.id] = d.id; });
+
+            // 2. Les DPS mappent vers leur DRS
+            dpsMapping.forEach(d => { entityToDrsMap[d.id] = d.drs_id; });
+
+            // 3. Les structures mappent vers le DRS de leur DPS
+            structureMapping.forEach(s => {
+                const dpsId = s.dps_id;
+                const drsId = dpsMapping.find(d => d.id === dpsId)?.drs_id;
+                if (drsId) {
+                    entityToDrsMap[s.id] = drsId;
+                }
+            });
 
             // Calculs métier
             const alertStocks = stocks.filter(s => s.quantite_actuelle <= s.seuil_alerte);
@@ -110,16 +161,14 @@ export function useNationalData() {
                 totalLivraisons: livraisons.length,
                 alertes: alertStocks.length,
                 stockTotalQuantity: stocks.reduce((sum, s) => sum + (s.quantite_actuelle || 0), 0),
-                activeUsers: 0 // À implémenter avec une requête vers la table users
+                activeUsers: profilesCountRes.count || 0
             };
 
             // Performance par région
-            // Pour chaque DRS, calculer les stocks et commandes qui lui sont liés
             const regionPerformance: RegionPerformance[] = drs.map(d => {
-                // Ici vous pourriez faire un filtre sur stocks si vous avez un lien DRS-entité
-                // Pour l'instant, on fait une distribution simple
-                const regionStocks = stocks.filter(s => s.entite_id.startsWith(d.id.substring(0, 3))); // Exemple simplifié
-                const regionCommandes = commandes.filter(c => c.entite_origine_id.startsWith(d.id.substring(0, 3))); // Exemple simplifié
+                // Filtrer les stocks et commandes appartenant à ce DRS ou ses sous-entités
+                const regionStocks = stocks.filter(s => entityToDrsMap[s.entite_id] === d.id);
+                const regionCommandes = commandes.filter(c => entityToDrsMap[c.entite_origine_id] === d.id);
 
                 return {
                     regionId: d.id,
@@ -132,13 +181,30 @@ export function useNationalData() {
                 };
             });
 
+            // Alertes de stock critique (quantité <= seuil_minimal) pour toutes les structures
+            const criticalStockAlerts: CriticalStockAlert[] = stocksRaw
+                .filter((item) => item.quantite_actuelle <= (item.seuil_minimal || 5))
+                .map((item) => {
+                    const drsId = entityToDrsMap[item.entite_id];
+                    const regionName = drs.find(d => d.id === drsId)?.region || drs.find(d => d.id === drsId)?.nom || 'Inconnue';
+                    return {
+                        id: item.id,
+                        medicament: item.lot?.medicament?.dci || 'N/A',
+                        entite_nom: item.entite_type + " " + item.entite_id, // On pourrait faire mieux avec plus de mappings
+                        quantite: item.quantite_actuelle,
+                        seuil_minimal: item.seuil_minimal || 5,
+                        region: regionName
+                    };
+                });
+
             return {
                 stats,
                 stocks,
                 commandes,
                 livraisons,
                 drs,
-                regionPerformance
+                regionPerformance,
+                criticalStockAlerts
             };
         },
         enabled: !!user,

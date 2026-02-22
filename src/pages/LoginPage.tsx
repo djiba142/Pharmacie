@@ -78,9 +78,10 @@ const LoginPage = () => {
         title: 'Email envoyé',
         description: 'Vérifiez votre boîte mail pour réinitialiser votre mot de passe',
       });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'envoi de l\'email');
-      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'Erreur lors de l\'envoi de l\'email');
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }

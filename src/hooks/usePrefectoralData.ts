@@ -18,7 +18,7 @@ export interface Commande {
     id: string;
     statut: string;
     created_at: string;
-    entite_origine_id: string;
+    entite_demandeur_id: string;
 }
 
 export interface Livraison {
@@ -54,6 +54,7 @@ export interface PrefectoralDataResult {
         alertes: number;
         stockTotalQuantity: number;
         structuresCount: number;
+        activeUsers: number;
     };
     structurePerformance: Array<{
         structureId: string;
@@ -61,6 +62,7 @@ export interface PrefectoralDataResult {
         type: string;
         stocks: number;
         alertes: number;
+        performance: number;
     }>;
 }
 
@@ -108,27 +110,49 @@ export function usePrefectoralData() {
                 `)
                 .in('entite_id', [entityId, ...structureIds]);
 
-            const commandesQuery = (supabase
-                .from('commandes') as any)
+            const commandesQuery = supabase
+                .from('commandes')
                 .select('*')
-                .eq('entite_origine_id', entityId);
+                .eq('entite_demandeur_id', entityId);
 
-            const livraisonsQuery = (supabase
-                .from('livraisons') as any)
+            const livraisonsQuery = supabase
+                .from('livraisons')
                 .select('*')
                 .eq('entite_destination_id', entityId);
 
-            const [stocksRes, commandesRes, livraisonsRes] = await Promise.all([
+            const profilesCountQuery = supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .in('entity_id', [entityId, ...structureIds])
+                .eq('is_active', true);
+
+            const [stocksRes, commandesRes, livraisonsRes, profilesCountRes] = await Promise.all([
                 stocksQuery,
                 commandesQuery,
-                livraisonsQuery
+                livraisonsQuery,
+                profilesCountQuery
             ]);
 
             if (stocksRes.error) console.warn('Erreur stocks:', stocksRes.error);
             if (commandesRes.error) console.warn('Erreur commandes:', commandesRes.error);
             if (livraisonsRes.error) console.warn('Erreur livraisons:', livraisonsRes.error);
 
-            const stocks: Stock[] = (stocksRes.data || []).map((item: any) => ({
+            interface StockWithLot {
+                id: string;
+                quantite_actuelle: number;
+                seuil_alerte: number;
+                entite_id: string;
+                prix_unitaire?: number;
+                lot?: {
+                    date_peremption: string | null;
+                    medicament?: {
+                        nom_commercial: string;
+                        dci: string;
+                    };
+                };
+            }
+
+            const stocks: Stock[] = (stocksRes.data as unknown as StockWithLot[] || []).map((item) => ({
                 id: item.id,
                 nom: item.lot?.medicament?.nom_commercial || item.lot?.medicament?.dci || 'Médicament inconnu',
                 quantite_actuelle: item.quantite_actuelle,
@@ -137,7 +161,7 @@ export function usePrefectoralData() {
                 entite_id: item.entite_id,
                 prix_unitaire: item.prix_unitaire // Assuming this might exist or be undefined
             }));
-            const commandes = (commandesRes.data || []) as Commande[];
+            const commandes = (commandesRes.data || []) as unknown as Commande[];
             const livraisons = (livraisonsRes.data || []) as Livraison[];
 
             // 4. Calculs métier
@@ -146,12 +170,16 @@ export function usePrefectoralData() {
             // Performance par structure
             const structurePerformance = structuresList.map(struct => {
                 const structStocks = stocks.filter(s => s.entite_id === struct.id);
+                const structAlertes = structStocks.filter(s => s.quantite_actuelle <= s.seuil_alerte).length;
                 return {
                     structureId: struct.id,
                     structureName: struct.nom,
                     type: struct.type,
                     stocks: structStocks.length,
-                    alertes: structStocks.filter(s => s.quantite_actuelle <= s.seuil_alerte).length
+                    alertes: structAlertes,
+                    performance: structStocks.length > 0
+                        ? (1 - (structAlertes / structStocks.length)) * 100
+                        : 100
                 };
             });
 
@@ -167,7 +195,8 @@ export function usePrefectoralData() {
                     totalLivraisons: livraisons.length,
                     alertes: alertStocks.length,
                     stockTotalQuantity: stocks.reduce((sum, s) => sum + (s.quantite_actuelle || 0), 0),
-                    structuresCount: structuresList.length
+                    structuresCount: structuresList.length,
+                    activeUsers: profilesCountRes.count || 0
                 },
                 structurePerformance
             };

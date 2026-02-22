@@ -90,7 +90,7 @@ export default function AuditPage() {
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                                <Select value={statusFilter} onValueChange={(v: 'ALL' | 'SUCCESS' | 'FAILURE') => setStatusFilter(v)}>
                                     <SelectTrigger className="w-[180px]">
                                         <div className="flex items-center gap-2">
                                             <Filter className="h-4 w-4" />

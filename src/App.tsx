@@ -42,6 +42,7 @@ import TreasuryPage from "./pages/finance/TreasuryPage";
 import { AIChatWidget } from "./components/ai/AIChatWidget";
 import { CookieBanner } from "./components/CookieBanner";
 import { useAuthStore } from './store/authStore';
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -97,17 +98,19 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppContent />
-        <AIChatWidget />
-        <CookieBanner />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppContent />
+          <AIChatWidget />
+          <CookieBanner />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

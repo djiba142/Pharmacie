@@ -87,7 +87,17 @@ export default function LivraisonsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('livraisons')
-        .select('*')
+        .select(`
+          *,
+          commandes(
+            id,
+            lignes_commande(
+              id,
+              quantite_demandee,
+              medicaments(dci, dosage, image_url)
+            )
+          )
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -106,7 +116,7 @@ export default function LivraisonsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, statut }: { id: string; statut: string }) => {
-      const updates: any = { statut };
+      const updates: Record<string, unknown> = { statut };
       if (statut === 'EN_COURS') updates.date_depart = new Date().toISOString();
       if (statut === 'LIVREE') updates.date_arrivee_reelle = new Date().toISOString();
       const { error } = await supabase.from('livraisons').update(updates).eq('id', id);
@@ -117,26 +127,51 @@ export default function LivraisonsPage() {
       toast({ title: 'Statut mis à jour' });
       setSelectedLivraison(null);
     },
-    onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });
 
-  const filtered = livraisons.filter((l: any) => {
+  interface LivraisonItem {
+    id: string;
+    numero_livraison: string;
+    statut: LivraisonStatut;
+    entite_origine_type?: string;
+    entite_destination_type?: string;
+    date_depart?: string | null;
+    date_arrivee_reelle?: string | null;
+    latitude_actuelle?: number | null;
+    longitude_actuelle?: number | null;
+    commentaire?: string | null;
+    commandes?: {
+      id: string;
+      lignes_commande?: {
+        id: string;
+        quantite_demandee: number;
+        medicaments?: {
+          dci: string;
+          dosage: string;
+          image_url: string | null;
+        } | null;
+      }[] | null;
+    } | null;
+  }
+
+  const filtered = (livraisons as unknown as LivraisonItem[]).filter((l) => {
     const matchSearch = l.numero_livraison.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || l.statut === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const enCours = livraisons.filter((l: any) => l.statut === 'EN_COURS');
-  const detail = livraisons.find((l: any) => l.id === selectedLivraison);
+  const enCours = (livraisons as unknown as LivraisonItem[]).filter((l) => l.statut === 'EN_COURS');
+  const detail = (livraisons as unknown as LivraisonItem[]).find((l) => l.id === selectedLivraison);
 
   const counts = {
     total: livraisons.length,
     en_cours: enCours.length,
-    livrees: livraisons.filter((l: any) => l.statut === 'LIVREE').length,
-    preparees: livraisons.filter((l: any) => l.statut === 'PREPAREE').length,
+    livrees: (livraisons as unknown as LivraisonItem[]).filter((l) => l.statut === 'LIVREE').length,
+    preparees: (livraisons as unknown as LivraisonItem[]).filter((l) => l.statut === 'PREPAREE').length,
   };
 
-  const mapMarkers = enCours.map((l: any) => {
+  const mapMarkers = enCours.map((l) => {
     if (l.latitude_actuelle && l.longitude_actuelle) {
       return { ...l, lat: l.latitude_actuelle, lng: l.longitude_actuelle, isGps: true };
     }
@@ -146,7 +181,7 @@ export default function LivraisonsPage() {
       return { ...l, ...CITY_COORDINATES[foundCity], isGps: false };
     }
     return null;
-  }).filter(Boolean);
+  }).filter(Boolean) as (LivraisonItem & { lat: number, lng: number, isGps: boolean })[];
 
   if (isLoading) {
     return (
@@ -159,9 +194,11 @@ export default function LivraisonsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Suivi des Livraisons</h1>
-        <p className="text-sm text-muted-foreground mt-1">Carte temps réel et suivi des expéditions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Suivi des Livraisons</h1>
+          <p className="text-sm text-muted-foreground mt-1">Carte temps réel et suivi des expéditions</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -204,7 +241,7 @@ export default function LivraisonsPage() {
                 url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
               />
 
-              {mapMarkers.map((l: any) => (
+              {mapMarkers.map((l) => (
                 <Marker
                   key={l.id}
                   position={[l.lat, l.lng]}
@@ -266,7 +303,7 @@ export default function LivraisonsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((l: any) => {
+              {filtered.map((l) => {
                 const cfg = STATUTS_LIVRAISON[l.statut as LivraisonStatut] || STATUTS_LIVRAISON.PREPAREE;
                 return (
                   <TableRow key={l.id}>
@@ -319,6 +356,33 @@ export default function LivraisonsPage() {
                 )}
               </div>
 
+              {/* Lignes de la livraison (via commande) */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-3">Produits à livrer</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {detail.commandes?.lignes_commande?.map((l) => (
+                    <div key={l.id} className="flex items-center justify-between p-2 rounded-lg border bg-slate-50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded border bg-white flex items-center justify-center overflow-hidden shrink-0">
+                          {l.medicaments?.image_url ? (
+                            <img src={l.medicaments.image_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <Package className="h-4 w-4 text-muted-foreground/30" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{l.medicaments?.dci}</p>
+                          <p className="text-xs text-muted-foreground">{l.medicaments?.dosage}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold">x {l.quantite_demandee}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {detail.commentaire && <div className="text-sm bg-muted p-3 rounded-lg">{detail.commentaire}</div>}
 
               <div className="flex flex-wrap gap-2 border-t border-border pt-4">
@@ -337,6 +401,7 @@ export default function LivraisonsPage() {
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

@@ -13,7 +13,7 @@ import logoLivramed from '@/assets/logo-livramed.png';
 interface GuideSection {
     id: string;
     title: string;
-    icon: any;
+    icon: React.ElementType;
     description: string;
     subsections?: { id: string; title: string; }[];
 }
